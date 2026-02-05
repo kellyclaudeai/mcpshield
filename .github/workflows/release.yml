@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g., v0.1.1)'
+        required: true
+        type: string
 
 permissions:
   id-token: write
@@ -12,11 +18,14 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Full history for changelog generation
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -41,7 +50,7 @@ jobs:
         id: changelog
         run: |
           # Get the previous tag
-          PREV_TAG=$(git tag --sort=-v:refname | grep -v "^${GITHUB_REF_NAME}$" | head -n 1)
+          PREV_TAG=$(git tag --sort=-v:refname | grep -v "^${RELEASE_TAG}$" | head -n 1)
           
           # If no previous tag, use initial commit
           if [ -z "$PREV_TAG" ]; then
@@ -49,7 +58,7 @@ jobs:
           fi
           
           # Generate changelog from conventional commits
-          echo "## Changes in ${GITHUB_REF_NAME}" > RELEASE_NOTES.md
+          echo "## Changes in ${RELEASE_TAG}" > RELEASE_NOTES.md
           echo "" >> RELEASE_NOTES.md
           
           # Group commits by type
@@ -68,17 +77,22 @@ jobs:
           
           cat RELEASE_NOTES.md
 
-      - name: Publish packages (NPM_TOKEN)
-        if: ${{ secrets.NPM_TOKEN != '' }}
+      - name: Publish packages
+        id: publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: node scripts/publish-workspaces.mjs
+        run: |
+          if [ -z "${NODE_AUTH_TOKEN}" ]; then
+            echo "NPM_TOKEN secret is not set; skipping npm publish."
+            echo "published=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
-      - name: Publish packages (Trusted Publishing / OIDC)
-        if: ${{ secrets.NPM_TOKEN == '' }}
-        run: node scripts/publish-workspaces.mjs
+          node scripts/publish-workspaces.mjs
+          echo "published=true" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
+        if: ${{ steps.publish.outputs.published == 'true' }}
         uses: actions/github-script@v7
         with:
           script: |
@@ -88,8 +102,8 @@ jobs:
             await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              tag_name: context.ref.replace('refs/tags/', ''),
-              name: context.ref.replace('refs/tags/', ''),
+              tag_name: process.env.RELEASE_TAG,
+              name: process.env.RELEASE_TAG,
               body: releaseNotes,
               draft: false,
               prerelease: false
