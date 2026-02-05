@@ -137,6 +137,13 @@ If a tag already exists and you need to re-run publishing (e.g., after fixing CI
   2. Add your npm user to the org and grant publish permission.
   3. Use a **granular automation token** (classic tokens may be revoked) or publish once manually then switch to OIDC trusted publishing.
 
+### Publish fails with `E422` about Sigstore provenance / private repo visibility
+
+- **Cause**: npm provenance verification from GitHub Actions only supports **public** source repositories.
+- **Fix**:
+  1. Make the GitHub repository public, then re-enable provenance publishing.
+  2. Or publish without provenance (the default `Release` workflow runs `scripts/publish-workspaces.mjs --no-provenance`).
+
 ### Workflow fails on tests
 
 - **Cause**: Breaking changes not caught locally

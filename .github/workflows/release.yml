@@ -101,7 +101,7 @@ jobs:
             exit 0
           fi
 
-          node scripts/publish-workspaces.mjs
+          node scripts/publish-workspaces.mjs --no-provenance
           echo "published=true" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
