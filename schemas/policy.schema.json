@@ -1,0 +1,8 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcpshield.dev/schemas/v1/policy.json",
+  "title": "MCPShield Policy Configuration",
+  "description": "Security and access control policy for MCP servers (YAML format)",
+  "$comment": "This is the canonical schema for policy.yaml files. See policy.yaml.schema.json for detailed documentation.",
+  "$ref": "./policy.yaml.schema.json"
+}

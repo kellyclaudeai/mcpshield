@@ -5,7 +5,7 @@
 export * from './types.js';
 export * from './registry-client.js';
 export * from './namespace-verifier.js';
-export { LockfileManager, LockfileEntry, LockfileData } from './lockfile.js';
+export { LockfileManager } from './lockfile.js';
 export {
   ArtifactResolver,
   NpmResolver,
@@ -16,3 +16,14 @@ export {
   ArtifactInfo,
   ResolverResult,
 } from './artifact-resolver.js';
+export {
+  Policy,
+  GlobalPolicy,
+  ServerPolicy,
+  PolicyEvaluationResult,
+  loadPolicy,
+  validatePolicy,
+  evaluateAdd,
+  evaluateScan,
+  getDefaultPolicy,
+} from './policy.js';

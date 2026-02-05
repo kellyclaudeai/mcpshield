@@ -1,0 +1,100 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for changelog generation
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build all packages
+        run: npm run build
+
+      - name: Run tests
+        run: npm test
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get the previous tag
+          PREV_TAG=$(git tag --sort=-v:refname | grep -v "^${GITHUB_REF_NAME}$" | head -n 1)
+          
+          # If no previous tag, use initial commit
+          if [ -z "$PREV_TAG" ]; then
+            PREV_TAG=$(git rev-list --max-parents=0 HEAD)
+          fi
+          
+          # Generate changelog from conventional commits
+          echo "## Changes in ${GITHUB_REF_NAME}" > RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          
+          # Group commits by type
+          echo "### Features" >> RELEASE_NOTES.md
+          git log ${PREV_TAG}..HEAD --pretty=format:"%s" --grep="^feat" >> RELEASE_NOTES.md || echo "None" >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          
+          echo "### Bug Fixes" >> RELEASE_NOTES.md
+          git log ${PREV_TAG}..HEAD --pretty=format:"%s" --grep="^fix" >> RELEASE_NOTES.md || echo "None" >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          
+          echo "### Other Changes" >> RELEASE_NOTES.md
+          git log ${PREV_TAG}..HEAD --pretty=format:"%s" --grep="^chore\|^docs\|^refactor\|^test" >> RELEASE_NOTES.md || echo "None" >> RELEASE_NOTES.md
+          
+          cat RELEASE_NOTES.md
+
+      - name: Publish @mcpshield/core
+        working-directory: packages/core
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @mcpshield/scanner
+        working-directory: packages/scanner
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @mcpshield/cli
+        working-directory: packages/cli
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const releaseNotes = fs.readFileSync('RELEASE_NOTES.md', 'utf8');
+            
+            await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: context.ref.replace('refs/tags/', ''),
+              name: context.ref.replace('refs/tags/', ''),
+              body: releaseNotes,
+              draft: false,
+              prerelease: false
+            });

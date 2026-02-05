@@ -16,15 +16,16 @@ import chalk from 'chalk';
 import prompts from 'prompts';
 import {
   RegistryClient,
-  Package,
   verifyNamespace,
   isValidNamespaceFormat,
   LockfileManager,
   LockfileEntry,
   NpmResolver,
-  PyPIResolver,
-  DigestVerifier,
   CacheManager,
+  loadPolicy,
+  validatePolicy,
+  evaluateAdd,
+  PolicyEvaluationResult,
 } from '@mcpshield/core';
 import { BasicScanner } from '@mcpshield/scanner';
 import * as fs from 'fs/promises';
@@ -34,7 +35,8 @@ import * as os from 'os';
 /**
  * Add command handler
  */
-export async function addCommand(serverName: string, options: { yes?: boolean } = {}): Promise<void> {
+export async function addCommand(serverName: string, options: { yes?: boolean; ci?: boolean } = {}): Promise<void> {
+  const isNonInteractive = options.yes || options.ci;
   console.log(chalk.blue(`\n📦 Adding MCP server: ${serverName}\n`));
 
   // Step 1: Validate namespace format
@@ -112,7 +114,7 @@ export async function addCommand(serverName: string, options: { yes?: boolean } 
   // Step 5: Download and verify artifacts
   console.log(chalk.bold('\n📥 Downloading artifacts...\n'));
   
-  const artifacts: Array<{ type: string; url: string; digest: string; size?: number }> = [];
+  const artifacts: Array<{ type: string; url: string; digest: string; size?: number; scanResult?: any }> = [];
   const cache = new CacheManager();
   const scanner = new BasicScanner();
   
@@ -134,17 +136,18 @@ export async function addCommand(serverName: string, options: { yes?: boolean } 
         // Store in cache
         await cache.put(digest, tempPath);
         
+        // Step 6: Run security scan
+        console.log(chalk.dim('  → Running security scan...'));
+        const buffer = await fs.readFile(tempPath);
+        const scanResult = await scanner.scanPackage(pkg, buffer);
+        
         artifacts.push({
           type: pkg.type,
           url: result.artifact.url,
           digest,
           size: result.artifact.size,
+          scanResult,
         });
-        
-        // Step 6: Run security scan
-        console.log(chalk.dim('  → Running security scan...'));
-        const buffer = await fs.readFile(tempPath);
-        const scanResult = await scanner.scanPackage(pkg, buffer);
         
         console.log(`  ${formatVerdict(scanResult.verdict)} Risk Score: ${scanResult.riskScore}/100`);
         
@@ -177,8 +180,87 @@ export async function addCommand(serverName: string, options: { yes?: boolean } 
     process.exit(1);
   }
 
-  // Step 7: Interactive approval
-  if (!options.yes) {
+  // Step 7: Policy evaluation
+  console.log(chalk.dim('\n→ Evaluating policy...'));
+  
+  const policy = await loadPolicy();
+  let policyResult: PolicyEvaluationResult = { allowed: true, reasons: [] };
+  let allFindings: any[] = [];
+  let maxRiskScore = 0;
+  
+  // Collect all findings and max risk score from scans
+  for (const artifact of artifacts) {
+    if ((artifact as any).scanResult) {
+      const scanResult = (artifact as any).scanResult;
+      allFindings.push(...scanResult.findings);
+      maxRiskScore = Math.max(maxRiskScore, scanResult.riskScore);
+    }
+  }
+  
+  if (policy) {
+    const validation = await validatePolicy(policy);
+    if (!validation.valid) {
+      console.error(
+        chalk.red('\n✗ Invalid policy configuration:\n') +
+        validation.errors!.map(e => chalk.dim(`  - ${e}`)).join('\n')
+      );
+      process.exit(1);
+    }
+    
+    policyResult = evaluateAdd({
+      serverName,
+      verified: verification.verified,
+      verificationMethod: verification.method,
+      riskScore: maxRiskScore,
+      findings: allFindings,
+      policy,
+    });
+    
+    if (!policyResult.allowed) {
+      console.log(chalk.red('✗ Policy check failed'));
+      console.log(chalk.red('\nReasons:'));
+      policyResult.reasons.forEach(reason => {
+        console.log(chalk.red(`  • ${reason}`));
+      });
+      
+      if (isNonInteractive) {
+        // In CI/non-interactive mode, output JSON and exit
+        console.error(JSON.stringify({
+          error: 'policy_violation',
+          serverName,
+          reasons: policyResult.reasons,
+        }, null, 2));
+        process.exit(1);
+      } else {
+        // In interactive mode, prompt for override
+        console.log();
+        const { override } = await prompts({
+          type: 'confirm',
+          name: 'override',
+          message: chalk.yellow('Policy check failed. Override and continue anyway?'),
+          initial: false,
+        });
+        
+        if (!override) {
+          console.log(chalk.yellow('\n⚠ Aborted. Server not added.'));
+          process.exit(1);
+        }
+        
+        console.log(chalk.yellow('\n⚠ Policy override granted. Proceeding with caution...'));
+      }
+    } else {
+      console.log(chalk.green('✓ Policy check passed'));
+      
+      if (policyResult.requiresApproval) {
+        console.log(chalk.yellow('⚠ This server requires approval due to sensitive capabilities'));
+      }
+    }
+  } else {
+    console.log(chalk.dim('  (No policy.yaml found, skipping policy check)'));
+  }
+
+  // Step 8: Interactive approval
+  if (!isNonInteractive) {
     console.log();
     const { approve } = await prompts({
       type: 'confirm',
@@ -193,7 +275,7 @@ export async function addCommand(serverName: string, options: { yes?: boolean } 
     }
   }
 
-  // Step 8: Write to lockfile
+  // Step 9: Write to lockfile
   console.log(chalk.dim('\n→ Updating lockfile...'));
   
   const lockfileManager = new LockfileManager();

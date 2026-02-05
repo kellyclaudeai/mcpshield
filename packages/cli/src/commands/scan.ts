@@ -10,13 +10,22 @@ import {
   LockfileEntry,
   NpmResolver,
   CacheManager,
+  loadPolicy,
+  validatePolicy,
+  evaluateScan,
 } from '@mcpshield/core';
 import { BasicScanner } from '@mcpshield/scanner';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
 
-export async function scanCommand(): Promise<void> {
+export interface ScanCommandOptions {
+  ci?: boolean;
+  enforce?: boolean;
+}
+
+export async function scanCommand(options: ScanCommandOptions = {}): Promise<void> {
+  const shouldEnforce = options.ci || options.enforce;
   console.log(chalk.blue('\n🔍 MCPShield Security Scan\n'));
   
   const lockfileManager = new LockfileManager();
@@ -122,15 +131,77 @@ export async function scanCommand(): Promise<void> {
   console.log(`  ${chalk.red('⚠')} Suspicious: ${suspicious}`);
   console.log(`  ${chalk.red('✗')} Malicious: ${malicious}`);
   
+  // Policy enforcement
+  const policyViolations: Array<{ namespace: string; reasons: string[] }> = [];
+  
+  if (shouldEnforce) {
+    console.log(chalk.bold('\n📋 Policy Evaluation\n'));
+    
+    const policy = await loadPolicy();
+    
+    if (policy) {
+      const validation = await validatePolicy(policy);
+      if (!validation.valid) {
+        console.error(
+          chalk.red('✗ Invalid policy configuration:\n') +
+          validation.errors!.map(e => chalk.dim(`  - ${e}`)).join('\n')
+        );
+        process.exit(1);
+      }
+      
+      // Evaluate each scan result against policy
+      for (const { namespace, result } of results) {
+        const lockfileEntry = lockfile.servers[namespace] as LockfileEntry;
+        const policyResult = evaluateScan({
+          serverName: namespace,
+          riskScore: result.riskScore,
+          findings: result.findings,
+          verified: lockfileEntry.verified || false,
+          policy,
+        });
+        
+        if (!policyResult.allowed) {
+          policyViolations.push({
+            namespace,
+            reasons: policyResult.reasons,
+          });
+        }
+      }
+      
+      if (policyViolations.length > 0) {
+        console.log(chalk.red(`✗ ${policyViolations.length} server(s) violate policy:\n`));
+        for (const violation of policyViolations) {
+          console.log(chalk.red(`  ${violation.namespace}:`));
+          for (const reason of violation.reasons) {
+            console.log(chalk.red(`    • ${reason}`));
+          }
+        }
+      } else {
+        console.log(chalk.green('✓ All servers pass policy checks'));
+      }
+    } else {
+      console.log(chalk.dim('  (No policy.yaml found, skipping policy enforcement)'));
+    }
+  }
+  
   if (malicious > 0) {
     console.log(chalk.red('\n❌ MALICIOUS PACKAGES DETECTED!'));
     console.log(chalk.red('   Review the findings above and remove these packages immediately.'));
+    if (shouldEnforce) {
+      process.exit(1);
+    }
   } else if (suspicious > 0) {
     console.log(chalk.yellow('\n⚠ Suspicious packages detected. Review carefully before use.'));
   } else if (warning > 0) {
     console.log(chalk.yellow('\n⚠ Some packages have warnings. Review recommended.'));
   } else {
     console.log(chalk.green('\n✅ All packages are clean!'));
+  }
+  
+  // Exit with error if policy violations in enforce mode
+  if (shouldEnforce && policyViolations.length > 0) {
+    console.log();
+    process.exit(1);
   }
   
   console.log();

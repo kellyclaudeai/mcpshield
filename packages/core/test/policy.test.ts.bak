@@ -1,0 +1,351 @@
+/**
+ * Policy tests
+ */
+
+import { describe, it, beforeEach, afterEach } from 'node:test';
+import assert from 'node:assert';
+import {
+  Policy,
+  loadPolicy,
+  validatePolicy,
+  evaluateAdd,
+  evaluateScan,
+  getDefaultPolicy,
+} from '../src/policy.js';
+import { Finding } from '../src/types.js';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import * as os from 'os';
+
+describe('Policy', () => {
+  let tempDir: string;
+  
+  beforeEach(async () => {
+    // Create temp directory for test files
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mcpshield-policy-test-'));
+  });
+  
+  afterEach(async () => {
+    // Clean up temp directory
+    try {
+      await fs.rm(tempDir, { recursive: true, force: true });
+    } catch (err) {
+      // Ignore cleanup errors
+    }
+  });
+  
+  describe('loadPolicy', () => {
+    it('should load valid policy from YAML', async () => {
+      const policyYaml = `
+version: "1.0"
+global:
+  maxRiskScore: 30
+  blockSeverities:
+    - critical
+    - high
+`;
+      const policyPath = path.join(tempDir, 'policy.yaml');
+      await fs.writeFile(policyPath, policyYaml);
+      
+      const policy = await loadPolicy(policyPath);
+      
+      expect(policy).toBeTruthy();
+      expect(policy?.version).toBe('1.0');
+      expect(policy?.global?.maxRiskScore).toBe(30);
+      expect(policy?.global?.blockSeverities).toEqual(['critical', 'high']);
+    });
+    
+    it('should return null if policy file does not exist', async () => {
+      const policy = await loadPolicy(path.join(tempDir, 'nonexistent.yaml'));
+      expect(policy).toBeNull();
+    });
+    
+    it('should throw on invalid YAML', async () => {
+      const policyPath = path.join(tempDir, 'invalid.yaml');
+      await fs.writeFile(policyPath, 'invalid: yaml: content: [[[');
+      
+      await expect(loadPolicy(policyPath)).rejects.toThrow();
+    });
+  });
+  
+  describe('validatePolicy', () => {
+    it('should validate correct policy', async () => {
+      const policy: Policy = {
+        version: '1.0',
+        global: {
+          maxRiskScore: 50,
+          blockSeverities: ['critical'],
+        },
+      };
+      
+      const result = await validatePolicy(policy);
+      
+      expect(result.valid).toBe(true);
+      expect(result.errors).toBeUndefined();
+    });
+    
+    it('should reject policy with invalid version', async () => {
+      const policy: any = {
+        version: '2.0',
+        global: {},
+      };
+      
+      const result = await validatePolicy(policy);
+      
+      expect(result.valid).toBe(false);
+      expect(result.errors).toBeDefined();
+    });
+    
+    it('should reject policy with out-of-range risk score', async () => {
+      const policy: any = {
+        version: '1.0',
+        global: {
+          maxRiskScore: 150,
+        },
+      };
+      
+      const result = await validatePolicy(policy);
+      
+      expect(result.valid).toBe(false);
+      expect(result.errors).toBeDefined();
+    });
+  });
+  
+  describe('evaluateAdd', () => {
+    it('should allow server when no policy exists', () => {
+      const result = evaluateAdd({
+        serverName: 'io.github.user/server',
+        verified: false,
+        riskScore: 80,
+        findings: [],
+        policy: null,
+      });
+      
+      expect(result.allowed).toBe(true);
+      expect(result.reasons).toHaveLength(0);
+    });
+    
+    it('should block server exceeding risk score threshold', () => {
+      const policy: Policy = {
+        version: '1.0',
+        global: {
+          maxRiskScore: 30,
+        },
+      };
+      
+      const result = evaluateAdd({
+        serverName: 'io.github.user/server',
+        verified: true,
+        riskScore: 50,
+        findings: [],
+        policy,
+      });
+      
+      expect(result.allowed).toBe(false);
+      expect(result.reasons).toContain('Risk score 50 exceeds maximum allowed 30');
+    });
+    
+    it('should block unverified server when denyUnverified is true', () => {
+      const policy: Policy = {
+        version: '1.0',
+        global: {
+          denyUnverified: true,
+        },
+      };
+      
+      const result = evaluateAdd({
+        serverName: 'io.github.user/server',
+        verified: false,
+        riskScore: 10,
+        findings: [],
+        policy,
+      });
+      
+      expect(result.allowed).toBe(false);
+      expect(result.reasons.length).toBeGreaterThan(0);
+    });
+    
+    it('should block server with critical findings when configured', () => {
+      const policy: Policy = {
+        version: '1.0',
+        global: {
+          blockSeverities: ['critical', 'high'],
+        },
+      };
+      
+      const findings: Finding[] = [
+        {
+          severity: 'critical',
+          category: 'malware',
+          message: 'Detected malicious code',
+        },
+      ];
+      
+      const result = evaluateAdd({
+        serverName: 'io.github.user/server',
+        verified: true,
+        riskScore: 20,
+        findings,
+        policy,
+      });
+      
+      expect(result.allowed).toBe(false);
+      expect(result.reasons.length).toBeGreaterThan(0);
+    });
+    
+    it('should allow server in allowlist', () => {
+      const policy: Policy = {
+        version: '1.0',
+        global: {
+          allowNamespaces: ['io.github.myorg/*'],
+        },
+      };
+      
+      const result = evaluateAdd({
+        serverName: 'io.github.myorg/server',
+        verified: true,
+        riskScore: 20,
+        findings: [],
+        policy,
+      });
+      
+      expect(result.allowed).toBe(true);
+    });
+    
+    it('should block server not in allowlist', () => {
+      const policy: Policy = {
+        version: '1.0',
+        global: {
+          allowNamespaces: ['io.github.myorg/*'],
+        },
+      };
+      
+      const result = evaluateAdd({
+        serverName: 'io.github.other/server',
+        verified: true,
+        riskScore: 20,
+        findings: [],
+        policy,
+      });
+      
+      expect(result.allowed).toBe(false);
+      expect(result.reasons.length).toBeGreaterThan(0);
+    });
+    
+    it('should block server in denylist', () => {
+      const policy: Policy = {
+        version: '1.0',
+        global: {
+          denyNamespaces: ['io.github.untrusted/*'],
+        },
+      };
+      
+      const result = evaluateAdd({
+        serverName: 'io.github.untrusted/server',
+        verified: true,
+        riskScore: 20,
+        findings: [],
+        policy,
+      });
+      
+      expect(result.allowed).toBe(false);
+      expect(result.reasons.length).toBeGreaterThan(0);
+    });
+  });
+  
+  describe('evaluateScan', () => {
+    it('should allow scan results when no policy exists', () => {
+      const result = evaluateScan({
+        serverName: 'io.github.user/server',
+        riskScore: 80,
+        findings: [],
+        verified: false,
+        policy: null,
+      });
+      
+      expect(result.allowed).toBe(true);
+    });
+    
+    it('should block scan results exceeding risk score', () => {
+      const policy: Policy = {
+        version: '1.0',
+        global: {
+          maxRiskScore: 50,
+        },
+      };
+      
+      const result = evaluateScan({
+        serverName: 'io.github.user/server',
+        riskScore: 99,
+        findings: [],
+        verified: true,
+        policy,
+      });
+      
+      expect(result.allowed).toBe(false);
+      expect(result.reasons).toContain('Risk score 99 exceeds policy maximum 50');
+    });
+    
+    it('should block scan with blocked severity findings', () => {
+      const policy: Policy = {
+        version: '1.0',
+        global: {
+          blockSeverities: ['critical'],
+        },
+      };
+      
+      const findings: Finding[] = [
+        {
+          severity: 'critical',
+          category: 'security',
+          message: 'Critical security issue',
+        },
+      ];
+      
+      const result = evaluateScan({
+        serverName: 'io.github.user/server',
+        riskScore: 30,
+        findings,
+        verified: true,
+        policy,
+      });
+      
+      expect(result.allowed).toBe(false);
+      expect(result.reasons.length).toBeGreaterThan(0);
+    });
+    
+    it('should block unverified server in scan when required', () => {
+      const policy: Policy = {
+        version: '1.0',
+        global: {
+          denyUnverified: true,
+        },
+      };
+      
+      const result = evaluateScan({
+        serverName: 'io.github.user/server',
+        riskScore: 20,
+        findings: [],
+        verified: false,
+        policy,
+      });
+      
+      expect(result.allowed).toBe(false);
+      expect(result.reasons.length).toBeGreaterThan(0);
+    });
+  });
+  
+  describe('getDefaultPolicy', () => {
+    it('should return valid default policy', async () => {
+      const policy = getDefaultPolicy();
+      
+      expect(policy.version).toBe('1.0');
+      expect(policy.global?.maxRiskScore).toBe(50);
+      expect(policy.global?.blockSeverities).toContain('critical');
+      
+      // Validate against schema
+      const validation = await validatePolicy(policy);
+      expect(validation.valid).toBe(true);
+    });
+  });
+});

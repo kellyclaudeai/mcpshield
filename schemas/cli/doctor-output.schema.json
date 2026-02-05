@@ -1,0 +1,121 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcpshield.dev/schemas/cli/doctor-output.schema.json",
+  "title": "MCPShield Doctor Output",
+  "description": "Diagnostic output from the mcp-shield doctor command",
+  "type": "object",
+  "required": [
+    "version",
+    "node",
+    "platform",
+    "paths",
+    "files",
+    "registry",
+    "timestamp"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "MCPShield tool version",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9.]+)?$"
+    },
+    "node": {
+      "type": "string",
+      "description": "Node.js version",
+      "pattern": "^v\\d+\\.\\d+\\.\\d+$"
+    },
+    "platform": {
+      "type": "object",
+      "description": "Platform information",
+      "required": ["type", "release", "arch"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Operating system type (e.g., darwin, linux, win32)",
+          "enum": ["darwin", "linux", "win32", "freebsd", "openbsd", "sunos", "aix"]
+        },
+        "release": {
+          "type": "string",
+          "description": "Operating system release version"
+        },
+        "arch": {
+          "type": "string",
+          "description": "CPU architecture",
+          "enum": ["arm", "arm64", "ia32", "mips", "mipsel", "ppc", "ppc64", "s390", "s390x", "x64"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "paths": {
+      "type": "object",
+      "description": "File system paths (with secrets redacted)",
+      "required": ["cwd", "cacheDir", "lockfile", "policyFile"],
+      "properties": {
+        "cwd": {
+          "type": "string",
+          "description": "Current working directory"
+        },
+        "cacheDir": {
+          "type": "string",
+          "description": "Cache directory path"
+        },
+        "lockfile": {
+          "type": "string",
+          "description": "Lockfile path (mcp.lock.json)"
+        },
+        "policyFile": {
+          "type": "string",
+          "description": "Policy file path (mcpshield-policy.yaml)"
+        }
+      },
+      "additionalProperties": false
+    },
+    "files": {
+      "type": "object",
+      "description": "File existence checks",
+      "required": ["lockfileExists", "policyExists"],
+      "properties": {
+        "lockfileExists": {
+          "type": "boolean",
+          "description": "Whether mcp.lock.json exists"
+        },
+        "policyExists": {
+          "type": "boolean",
+          "description": "Whether mcpshield-policy.yaml exists"
+        }
+      },
+      "additionalProperties": false
+    },
+    "registry": {
+      "type": "object",
+      "description": "Registry connectivity checks",
+      "required": ["url", "dnsResolved", "httpsReachable"],
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Registry URL"
+        },
+        "dnsResolved": {
+          "type": "boolean",
+          "description": "Whether DNS resolution succeeded"
+        },
+        "httpsReachable": {
+          "type": "boolean",
+          "description": "Whether HTTPS HEAD request succeeded"
+        },
+        "error": {
+          "type": "string",
+          "description": "Error message if connectivity check failed"
+        }
+      },
+      "additionalProperties": false
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when diagnostic was run"
+    }
+  },
+  "additionalProperties": false
+}

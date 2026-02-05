@@ -7,7 +7,7 @@
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
-import got from 'got';
+import * as https from 'https';
 import { Transform } from 'stream';
 import { pipeline } from 'stream/promises';
 
@@ -24,60 +24,9 @@ export interface ResolverResult {
   metadata: any;
 }
 
-export interface ResolverOptions {
-  /** Maximum artifact size in bytes (default: 50 MiB) */
-  maxArtifactSize?: number;
-  /** Connect timeout in milliseconds (default: 15000) */
-  connectTimeout?: number;
-  /** Request timeout in milliseconds (default: 60000) */
-  requestTimeout?: number;
-  /** Maximum number of redirects (default: 3) */
-  maxRedirects?: number;
-  /** Offline mode - refuse network and only use cache (default: false) */
-  offline?: boolean;
-}
-
-const DEFAULT_MAX_ARTIFACT_SIZE = 50 * 1024 * 1024; // 50 MiB
-const DEFAULT_CONNECT_TIMEOUT = 15000; // 15 seconds
-const DEFAULT_REQUEST_TIMEOUT = 60000; // 60 seconds
-const DEFAULT_MAX_REDIRECTS = 3;
-
 export abstract class ArtifactResolver {
-  protected options: Required<ResolverOptions>;
-
-  constructor(options: ResolverOptions = {}) {
-    this.options = {
-      maxArtifactSize: options.maxArtifactSize ?? DEFAULT_MAX_ARTIFACT_SIZE,
-      connectTimeout: options.connectTimeout ?? DEFAULT_CONNECT_TIMEOUT,
-      requestTimeout: options.requestTimeout ?? DEFAULT_REQUEST_TIMEOUT,
-      maxRedirects: options.maxRedirects ?? DEFAULT_MAX_REDIRECTS,
-      offline: options.offline ?? false,
-    };
-  }
-
   abstract resolve(identifier: string): Promise<ResolverResult>;
   abstract download(artifact: ArtifactInfo, outputPath: string): Promise<string>;
-
-  protected getGotOptions() {
-    return {
-      timeout: {
-        connect: this.options.connectTimeout,
-        request: this.options.requestTimeout,
-      },
-      followRedirect: true,
-      maxRedirects: this.options.maxRedirects,
-      throwHttpErrors: true,
-      retry: {
-        limit: 0, // Disable automatic retries - let caller handle
-      },
-    };
-  }
-
-  protected assertOnline(): void {
-    if (this.options.offline) {
-      throw new Error('Network access denied in offline mode');
-    }
-  }
 }
 
 /**
@@ -86,8 +35,8 @@ export abstract class ArtifactResolver {
 export class NpmResolver extends ArtifactResolver {
   private registryUrl: string;
   
-  constructor(registryUrl: string = 'https://registry.npmjs.org', options?: ResolverOptions) {
-    super(options);
+  constructor(registryUrl: string = 'https://registry.npmjs.org') {
+    super();
     this.registryUrl = registryUrl;
   }
   
@@ -96,53 +45,46 @@ export class NpmResolver extends ArtifactResolver {
    * @param identifier - package@version or @scope/package@version
    */
   async resolve(identifier: string): Promise<ResolverResult> {
-    this.assertOnline();
-
     const { name, version } = this.parseIdentifier(identifier);
     const url = `${this.registryUrl}/${encodeURIComponent(name)}`;
     
-    try {
-      const response = await got(url, {
-        ...this.getGotOptions(),
-        responseType: 'json',
-      });
-
-      const metadata = response.body as any;
-      const versionData = metadata.versions?.[version];
-      
-      if (!versionData) {
-        throw new Error(`Version ${version} not found for ${name}`);
-      }
-      
-      const artifact: ArtifactInfo = {
-        url: versionData.dist.tarball,
-        integrity: versionData.dist.integrity,
-        size: versionData.dist.size,
-        type: 'npm'
-      };
-      
-      return { artifact, metadata: versionData };
-    } catch (error: any) {
-      if (error.response) {
-        throw new Error(`NPM registry returned ${error.response.statusCode}: ${error.message}`);
-      }
-      throw new Error(`Failed to resolve npm package: ${error.message}`);
-    }
+    return new Promise((resolve, reject) => {
+      https.get(url, (res) => {
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => {
+          if (res.statusCode !== 200) {
+            return reject(new Error(`NPM registry returned ${res.statusCode}`));
+          }
+          
+          try {
+            const metadata = JSON.parse(data);
+            const versionData = metadata.versions[version];
+            
+            if (!versionData) {
+              return reject(new Error(`Version ${version} not found for ${name}`));
+            }
+            
+            const artifact: ArtifactInfo = {
+              url: versionData.dist.tarball,
+              integrity: versionData.dist.integrity,
+              size: versionData.dist.size,
+              type: 'npm'
+            };
+            
+            resolve({ artifact, metadata: versionData });
+          } catch (err) {
+            reject(err);
+          }
+        });
+      }).on('error', reject);
+    });
   }
   
   /**
    * Download npm package tarball
    */
   async download(artifact: ArtifactInfo, outputPath: string): Promise<string> {
-    this.assertOnline();
-
-    // Enforce max artifact size
-    if (artifact.size && artifact.size > this.options.maxArtifactSize) {
-      throw new Error(
-        `Artifact size ${artifact.size} bytes exceeds maximum allowed size ${this.options.maxArtifactSize} bytes`
-      );
-    }
-
     await fs.promises.mkdir(path.dirname(outputPath), { recursive: true });
     
     // Determine hash algorithm from integrity string
@@ -156,48 +98,45 @@ export class NpmResolver extends ArtifactResolver {
     }
 
     const hash = crypto.createHash(algorithm);
-    let downloadedBytes = 0;
-    const maxSize = this.options.maxArtifactSize;
 
-    try {
-      const downloadStream = got.stream(artifact.url, this.getGotOptions());
+    return new Promise((resolve, reject) => {
+      const request = https.get(artifact.url, (res) => {
+        if (res.statusCode !== 200) {
+          res.resume(); // drain
+          reject(new Error(`Download failed: ${res.statusCode}`));
+          return;
+        }
 
-      // Track downloaded size and enforce limit
-      const sizeTracker = new Transform({
-        transform(chunk, _encoding, callback) {
-          downloadedBytes += chunk.length;
-          if (downloadedBytes > maxSize) {
-            callback(new Error(
-              `Download size ${downloadedBytes} bytes exceeds maximum allowed size ${maxSize} bytes`
-            ));
-            return;
-          }
-          hash.update(chunk);
-          callback(null, chunk);
-        },
+        const hasher = new Transform({
+          transform(chunk, _encoding, callback) {
+            hash.update(chunk);
+            callback(null, chunk);
+          },
+        });
+
+        pipeline(res, hasher, fs.createWriteStream(outputPath))
+          .then(async () => {
+            const digest = `${algorithm}-${hash.digest('base64')}`;
+
+            if (artifact.integrity && artifact.integrity !== digest) {
+              await fs.promises.unlink(outputPath).catch(() => {});
+              reject(new Error(`Integrity mismatch: expected ${artifact.integrity}, got ${digest}`));
+              return;
+            }
+
+            resolve(digest);
+          })
+          .catch(async (err) => {
+            await fs.promises.unlink(outputPath).catch(() => {});
+            reject(err);
+          });
       });
 
-      await pipeline(
-        downloadStream,
-        sizeTracker,
-        fs.createWriteStream(outputPath)
-      );
-
-      const digest = `${algorithm}-${hash.digest('base64')}`;
-
-      if (artifact.integrity && artifact.integrity !== digest) {
+      request.on('error', async (err) => {
         await fs.promises.unlink(outputPath).catch(() => {});
-        throw new Error(`Integrity mismatch: expected ${artifact.integrity}, got ${digest}`);
-      }
-
-      return digest;
-    } catch (error: any) {
-      await fs.promises.unlink(outputPath).catch(() => {});
-      if (error.response) {
-        throw new Error(`Download failed with status ${error.response.statusCode}: ${error.message}`);
-      }
-      throw error;
-    }
+        reject(err);
+      });
+    });
   }
   
   private parseIdentifier(identifier: string): { name: string; version: string } {
@@ -224,8 +163,8 @@ export class NpmResolver extends ArtifactResolver {
 export class PyPIResolver extends ArtifactResolver {
   private registryUrl: string;
   
-  constructor(registryUrl: string = 'https://pypi.org', options?: ResolverOptions) {
-    super(options);
+  constructor(registryUrl: string = 'https://pypi.org') {
+    super();
     this.registryUrl = registryUrl;
   }
   
@@ -234,103 +173,93 @@ export class PyPIResolver extends ArtifactResolver {
    * @param identifier - package==version
    */
   async resolve(identifier: string): Promise<ResolverResult> {
-    this.assertOnline();
-
     const { name, version } = this.parseIdentifier(identifier);
     const url = `${this.registryUrl}/pypi/${name}/${version}/json`;
     
-    try {
-      const response = await got(url, {
-        ...this.getGotOptions(),
-        responseType: 'json',
-      });
-
-      const metadata = response.body as any;
-      const urls = metadata.urls;
-      
-      // Find the source distribution or wheel
-      const sdist = urls.find((u: any) => u.packagetype === 'sdist');
-      const wheel = urls.find((u: any) => u.packagetype === 'bdist_wheel');
-      const artifact_data = sdist || wheel || urls[0];
-      
-      if (!artifact_data) {
-        throw new Error(`No downloadable artifacts found for ${name}==${version}`);
-      }
-      
-      const artifact: ArtifactInfo = {
-        url: artifact_data.url,
-        digest: artifact_data.digests?.sha256 ? `sha256-${Buffer.from(artifact_data.digests.sha256, 'hex').toString('base64')}` : undefined,
-        size: artifact_data.size,
-        type: 'pypi'
-      };
-      
-      return { artifact, metadata };
-    } catch (error: any) {
-      if (error.response) {
-        throw new Error(`PyPI registry returned ${error.response.statusCode}: ${error.message}`);
-      }
-      throw new Error(`Failed to resolve PyPI package: ${error.message}`);
-    }
+    return new Promise((resolve, reject) => {
+      https.get(url, (res) => {
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => {
+          if (res.statusCode !== 200) {
+            return reject(new Error(`PyPI registry returned ${res.statusCode}`));
+          }
+          
+          try {
+            const metadata = JSON.parse(data);
+            const urls = metadata.urls;
+            
+            // Find the source distribution or wheel
+            const sdist = urls.find((u: any) => u.packagetype === 'sdist');
+            const wheel = urls.find((u: any) => u.packagetype === 'bdist_wheel');
+            const artifact_data = sdist || wheel || urls[0];
+            
+            if (!artifact_data) {
+              return reject(new Error(`No downloadable artifacts found for ${name}@${version}`));
+            }
+            
+            const artifact: ArtifactInfo = {
+              url: artifact_data.url,
+              digest: artifact_data.digests?.sha256 ? `sha256-${Buffer.from(artifact_data.digests.sha256, 'hex').toString('base64')}` : undefined,
+              size: artifact_data.size,
+              type: 'pypi'
+            };
+            
+            resolve({ artifact, metadata });
+          } catch (err) {
+            reject(err);
+          }
+        });
+      }).on('error', reject);
+    });
   }
   
   /**
    * Download PyPI package
    */
   async download(artifact: ArtifactInfo, outputPath: string): Promise<string> {
-    this.assertOnline();
-
-    // Enforce max artifact size
-    if (artifact.size && artifact.size > this.options.maxArtifactSize) {
-      throw new Error(
-        `Artifact size ${artifact.size} bytes exceeds maximum allowed size ${this.options.maxArtifactSize} bytes`
-      );
-    }
-
     await fs.promises.mkdir(path.dirname(outputPath), { recursive: true });
     
     const hash = crypto.createHash('sha256');
-    let downloadedBytes = 0;
-    const maxSize = this.options.maxArtifactSize;
 
-    try {
-      const downloadStream = got.stream(artifact.url, this.getGotOptions());
+    return new Promise((resolve, reject) => {
+      const request = https.get(artifact.url, (res) => {
+        if (res.statusCode !== 200) {
+          res.resume(); // drain
+          reject(new Error(`Download failed: ${res.statusCode}`));
+          return;
+        }
 
-      // Track downloaded size and enforce limit
-      const sizeTracker = new Transform({
-        transform(chunk, _encoding, callback) {
-          downloadedBytes += chunk.length;
-          if (downloadedBytes > maxSize) {
-            callback(new Error(
-              `Download size ${downloadedBytes} bytes exceeds maximum allowed size ${maxSize} bytes`
-            ));
-            return;
-          }
-          hash.update(chunk);
-          callback(null, chunk);
-        },
+        const hasher = new Transform({
+          transform(chunk, _encoding, callback) {
+            hash.update(chunk);
+            callback(null, chunk);
+          },
+        });
+
+        pipeline(res, hasher, fs.createWriteStream(outputPath))
+          .then(async () => {
+            const digest = `sha256-${hash.digest('base64')}`;
+
+            if (artifact.digest && artifact.digest !== digest) {
+              await fs.promises.unlink(outputPath).catch(() => {});
+              reject(new Error(`Digest mismatch: expected ${artifact.digest}, got ${digest}`));
+              return;
+            }
+
+            resolve(digest);
+          })
+          .catch(async (err) => {
+            await fs.promises.unlink(outputPath).catch(() => {});
+            reject(err);
+          });
       });
 
-      await pipeline(
-        downloadStream,
-        sizeTracker,
-        fs.createWriteStream(outputPath)
-      );
-
-      const digest = `sha256-${hash.digest('base64')}`;
-
-      if (artifact.digest && artifact.digest !== digest) {
+      request.on('error', async (err) => {
         await fs.promises.unlink(outputPath).catch(() => {});
-        throw new Error(`Digest mismatch: expected ${artifact.digest}, got ${digest}`);
-      }
-
-      return digest;
-    } catch (error: any) {
-      await fs.promises.unlink(outputPath).catch(() => {});
-      if (error.response) {
-        throw new Error(`Download failed with status ${error.response.statusCode}: ${error.message}`);
-      }
-      throw error;
-    }
+        reject(err);
+      });
+    });
   }
   
   private parseIdentifier(identifier: string): { name: string; version: string } {
@@ -352,8 +281,8 @@ export class PyPIResolver extends ArtifactResolver {
 export class DockerResolver extends ArtifactResolver {
   private registryUrl: string;
   
-  constructor(registryUrl: string = 'https://registry-1.docker.io', options?: ResolverOptions) {
-    super(options);
+  constructor(registryUrl: string = 'https://registry-1.docker.io') {
+    super();
     this.registryUrl = registryUrl;
   }
   
@@ -362,8 +291,6 @@ export class DockerResolver extends ArtifactResolver {
    * @param identifier - image:tag or registry/image:tag
    */
   async resolve(identifier: string): Promise<ResolverResult> {
-    this.assertOnline();
-
     // Parse identifier (simplified - real implementation needs more robust parsing)
     const parts = identifier.split(':');
     const image = parts[0] || 'library/unknown';
@@ -393,8 +320,6 @@ export class DockerResolver extends ArtifactResolver {
    * Download Docker image (placeholder)
    */
   async download(artifact: ArtifactInfo, outputPath: string): Promise<string> {
-    this.assertOnline();
-
     // Real implementation would:
     // 1. Download all layers
     // 2. Verify each layer digest
@@ -472,33 +397,8 @@ Review the changes before updating the lockfile.
 export class CacheManager {
   private cacheDir: string;
   
-  constructor(cacheDir?: string) {
-    this.cacheDir = cacheDir || this.getDefaultCacheDir();
-  }
-  
-  /**
-   * Get OS-specific default cache directory
-   */
-  private getDefaultCacheDir(): string {
-    // Allow override via environment variable
-    if (process.env.MCPSHIELD_CACHE_DIR) {
-      return process.env.MCPSHIELD_CACHE_DIR;
-    }
-    
-    const home = process.env.HOME || process.env.USERPROFILE || '';
-    
-    // XDG_CACHE_HOME takes precedence on all platforms
-    if (process.env.XDG_CACHE_HOME) {
-      return path.join(process.env.XDG_CACHE_HOME, 'mcpshield');
-    }
-    
-    // macOS
-    if (process.platform === 'darwin') {
-      return path.join(home, 'Library', 'Caches', 'mcpshield');
-    }
-    
-    // Linux/Unix/other (fallback to ~/.cache)
-    return path.join(home, '.cache', 'mcpshield');
+  constructor(cacheDir: string = path.join(process.cwd(), '.mcpshield', 'cache')) {
+    this.cacheDir = cacheDir;
   }
   
   /**

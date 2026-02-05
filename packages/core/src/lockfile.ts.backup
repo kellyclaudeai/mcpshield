@@ -7,7 +7,30 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
-import { LockfileEntry, LockfileData } from './types.js';
+export interface LockfileEntry {
+  namespace: string;
+  version: string;
+  resolved?: string;
+  integrity?: string;
+  repository?: string;
+  verified: boolean;
+  verificationMethod?: string;
+  verifiedOwner?: string | null;
+  fetchedAt: string;
+  artifacts?: {
+    type: string;
+    url: string;
+    digest: string;
+    size?: number;
+  }[];
+}
+
+export interface LockfileData {
+  version: string;
+  generatedAt: string;
+  servers: Record<string, LockfileEntry>;
+}
+
 export class LockfileManager {
   private lockfilePath: string;
   
@@ -31,52 +54,12 @@ export class LockfileManager {
   }
   
   /**
-   * Write lockfile with stable formatting and atomic writes
-   * Uses tmp file + fsync + rename for crash safety
+   * Write lockfile with stable formatting
    */
   async write(lockfile: LockfileData): Promise<void> {
     const normalized = this.normalize(lockfile);
     const content = JSON.stringify(normalized, null, 2) + '\n';
-    
-    // Create temp file in same directory for atomic rename
-    const lockfileDir = path.dirname(this.lockfilePath);
-    const tmpPath = path.join(lockfileDir, `.mcp.lock.json.tmp.${process.pid}`);
-    
-    try {
-      // Write to temp file
-      await fs.writeFile(tmpPath, content, 'utf-8');
-      
-      // Fsync to ensure data is written to disk
-      const fileHandle = await fs.open(tmpPath, 'r+');
-      try {
-        await fileHandle.sync();
-      } finally {
-        await fileHandle.close();
-      }
-      
-      // Atomic rename
-      await fs.rename(tmpPath, this.lockfilePath);
-      
-      // Fsync directory to ensure rename is persisted
-      try {
-        const dirHandle = await fs.open(lockfileDir, 'r');
-        try {
-          await dirHandle.sync();
-        } finally {
-          await dirHandle.close();
-        }
-      } catch (error) {
-        // Directory sync may fail on some platforms, non-fatal
-      }
-    } catch (error) {
-      // Clean up temp file on error
-      try {
-        await fs.unlink(tmpPath);
-      } catch {
-        // Ignore cleanup errors
-      }
-      throw error;
-    }
+    await fs.writeFile(this.lockfilePath, content, 'utf-8');
   }
   
   /**
@@ -119,13 +102,6 @@ export class LockfileManager {
     }
   }
   
-
-  /**
-   * Get the lockfile path
-   */
-  getPath(): string {
-    return this.lockfilePath;
-  }
   /**
    * Validate lockfile structure
    */

@@ -2,6 +2,34 @@
  * Core types for MCPShield based on MCP Registry API
  */
 
+/**
+ * Lockfile types (actual implementation format used by LockfileManager)
+ */
+export interface LockfileEntry {
+  namespace: string;
+  version: string;
+  resolved?: string;
+  integrity?: string;
+  repository?: string;
+  verified: boolean;
+  verificationMethod?: string;
+  verifiedOwner?: string | null;
+  fetchedAt: string;
+  artifacts?: {
+    type: string;
+    url: string;
+    digest: string;
+    size?: number;
+  }[];
+}
+
+export interface LockfileData {
+  version: string;
+  generatedAt: string;
+  servers: Record<string, LockfileEntry>;
+}
+
+
 export interface Package {
   type: 'npm' | 'pypi' | 'docker' | 'nuget' | 'mcpb';
   identifier: string;
