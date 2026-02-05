@@ -32,28 +32,37 @@ jobs:
   publish:
     needs: test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.NPM_TOKEN != ''
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     
     steps:
+    - name: Skip npm publish (missing NPM_TOKEN)
+      if: env.NPM_TOKEN == ''
+      run: echo "NPM_TOKEN not set; skipping npm publish."
+
     - uses: actions/checkout@v4
+      if: env.NPM_TOKEN != ''
     
     - name: Setup Node.js
+      if: env.NPM_TOKEN != ''
       uses: actions/setup-node@v4
       with:
         node-version: '20'
         registry-url: 'https://registry.npmjs.org'
     
     - name: Install dependencies
+      if: env.NPM_TOKEN != ''
       run: npm install
     
     - name: Build
+      if: env.NPM_TOKEN != ''
       run: npm run build
     
     - name: Publish to npm
+      if: env.NPM_TOKEN != ''
       run: |
         # Only publish if version changed
         npm config set //registry.npmjs.org/:_authToken $NPM_TOKEN
         # Add actual publish logic when ready
         echo "Would publish to npm here"
-      env:
-        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
