@@ -415,11 +415,11 @@ Implement:
 
 Manual steps (document in `docs/release.md`):
 - [ ] Configure trusted publisher in npm settings (workflow file path must match exactly).
-- [ ] OR set GitHub Actions secret `NPM_TOKEN` to publish using a token (no trusted publishing setup required).
+- [x] OR set GitHub Actions secret `NPM_TOKEN` to publish using a token (no trusted publishing setup required).
 
 Acceptance:
 - [ ] Dry-run tag build completes without secrets.
-- [ ] Real publish verified on npm (once configured).
+- [x] Real publish verified on npm (once configured).
 
 ### PR-010 — Monetization assets (Pilot)
 Implement:
@@ -442,7 +442,7 @@ Implement:
   - macOS optional (but recommended) as a separate job
 
 Acceptance:
-- [ ] CI passes on Node 22 and Node 24. (verify on next GitHub run)
+- [x] CI passes on Node 22 and Node 24. (verify on next GitHub run)
 - [x] No workflow step hits the network in unit tests (E2E may, but must be labeled and allowed to fail if flaky).
 
 ### PR-012 — Support tooling (`doctor`, debug logs)
@@ -475,8 +475,8 @@ Run locally:
   - [x] `mcp-shield scan --ci --json`
 
 Run in CI:
-- [ ] Node 22 + 24 matrix
-- [ ] Linux + macOS smoke tests
+- [x] Node 22 + 24 matrix
+- [x] Linux + macOS smoke tests
 
 ---
 
