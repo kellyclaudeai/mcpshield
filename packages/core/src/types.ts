@@ -8,14 +8,15 @@
 export interface LockfileEntry {
   namespace: string;
   version: string;
-  resolved?: string;
-  integrity?: string;
-  repository?: string;
+  resolved?: string | null;
+  repository?: string | null;
   verified: boolean;
-  verificationMethod?: string;
+  verificationMethod?: string | null;
   verifiedOwner?: string | null;
   fetchedAt: string;
-  artifacts?: {
+  approvedAt?: string | null;
+  approvedBy?: string | null;
+  artifacts: {
     type: string;
     url: string;
     digest: string;
@@ -102,36 +103,6 @@ export interface SecurityScan {
   riskScore: number;
   findings: Finding[];
   dependencies?: DependencyAnalysis;
-}
-
-export interface LockedServer {
-  name: string;
-  version: string;
-  description: string;
-  source: {
-    type: 'registry' | 'git' | 'local';
-    registry?: string;
-    url?: string;
-    commit?: string;
-  };
-  repository?: {
-    url: string;
-    commit?: string;
-  };
-  publisherIdentity?: PublisherIdentity;
-  packages: LockedPackage[];
-  security?: SecurityScan;
-  approvedAt: string;
-  approvedBy?: string;
-}
-
-export interface Lockfile {
-  version: string;
-  servers: LockedServer[];
-  metadata?: {
-    generatedAt: string;
-    generatedBy?: string;
-  };
 }
 
 export class RegistryError extends Error {

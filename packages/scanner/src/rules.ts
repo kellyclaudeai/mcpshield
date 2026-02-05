@@ -36,6 +36,12 @@ export const SCAN_RULES: Record<string, ScanRule> = {
     severity: 'critical',
     description: 'Symlink or hardlink attempting to escape extraction root',
   },
+  EXTRACT_WARNING: {
+    id: 'EXTRACT_WARNING',
+    category: 'extraction',
+    severity: 'info',
+    description: 'Non-fatal warning during archive extraction',
+  },
 
   // Code patterns
   CODE_EVAL: {
@@ -132,6 +138,12 @@ export const SCAN_RULES: Record<string, ScanRule> = {
     severity: 'medium',
     description: 'Large number of dependencies increases attack surface',
   },
+  DEP_UNRESOLVED_SPEC: {
+    id: 'DEP_UNRESOLVED_SPEC',
+    category: 'dependencies',
+    severity: 'medium',
+    description: 'Dependency spec could not be resolved to an exact version',
+  },
 
   // Install scripts
   INSTALL_SCRIPT_NETWORK: {
@@ -193,6 +205,12 @@ export const SCAN_RULES: Record<string, ScanRule> = {
     category: 'unsupported',
     severity: 'info',
     description: 'Scanning not yet implemented for this package type',
+  },
+  SCAN_LIMITED_COVERAGE: {
+    id: 'SCAN_LIMITED_COVERAGE',
+    category: 'scan-coverage',
+    severity: 'info',
+    description: 'Scanning is limited for this package type',
   },
 };
 

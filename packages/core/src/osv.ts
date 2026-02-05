@@ -74,6 +74,18 @@ export interface OSVAnalysisResult {
   details: OSVVulnerability[];
 }
 
+export interface OSVUnresolvedDependency {
+  name: string;
+  spec: string;
+  reason: string;
+}
+
+export interface OSVNpmDependencyAnalysis {
+  analysis: OSVAnalysisResult;
+  resolved: Array<{ name: string; version: string; ecosystem: 'npm' }>;
+  unresolved: OSVUnresolvedDependency[];
+}
+
 /**
  * OSV API Client
  */
@@ -180,6 +192,41 @@ export class OSVClient {
       vulnerabilityIds,
       details,
     };
+  }
+
+  async analyzeNpmDependencySpecs(
+    dependencySpecs: Record<string, string>,
+    options: { registryUrl?: string } = {}
+  ): Promise<OSVNpmDependencyAnalysis> {
+    const registryUrl = options.registryUrl ?? 'https://registry.npmjs.org';
+    const resolved: Array<{ name: string; version: string; ecosystem: 'npm' }> = [];
+    const unresolved: OSVUnresolvedDependency[] = [];
+
+    for (const [name, spec] of Object.entries(dependencySpecs || {})) {
+      const resolution = await this.resolveNpmVersionFromSpec(name, spec, registryUrl);
+
+      if (!resolution.version) {
+        unresolved.push({
+          name,
+          spec,
+          reason: resolution.reason ?? 'unresolved dependency spec',
+        });
+        continue;
+      }
+
+      resolved.push({ name, version: resolution.version, ecosystem: 'npm' });
+    }
+
+    const analysis: OSVAnalysisResult =
+      resolved.length > 0
+        ? await this.analyzeDependencies(resolved)
+        : {
+            vulnerabilities: { critical: 0, high: 0, medium: 0, low: 0 },
+            vulnerabilityIds: [],
+            details: [],
+          };
+
+    return { analysis, resolved, unresolved };
   }
 
   /**
@@ -326,5 +373,56 @@ export class OSVClient {
     // Fallback: accept plain numeric score strings
     const numeric = Number(value);
     return Number.isFinite(numeric) ? numeric : null;
+  }
+
+  private async resolveNpmVersionFromSpec(
+    name: string,
+    spec: string,
+    registryUrl: string
+  ): Promise<{ version: string | null; reason?: string }> {
+    const cleaned = semver.clean(spec);
+    const exact = semver.valid(spec) || (cleaned ? semver.valid(cleaned) : null);
+
+    if (exact) {
+      return { version: exact };
+    }
+
+    const range = semver.validRange(spec);
+
+    try {
+      const packumentUrl = `${registryUrl}/${encodeURIComponent(name)}`;
+      const response = await got.get(packumentUrl, {
+        responseType: 'json',
+        timeout: { request: this.timeout },
+        retry: { limit: 0 },
+      });
+
+      const metadata = response.body as any;
+      const distTags: Record<string, string> | undefined = metadata?.['dist-tags'];
+
+      // Tags like "latest"
+      if (distTags && spec in distTags) {
+        const tagged = distTags[spec];
+        const taggedVersion = semver.valid(tagged);
+        if (taggedVersion) {
+          return { version: taggedVersion };
+        }
+      }
+
+      if (!range) {
+        return { version: null, reason: `Unsupported dependency spec: ${spec}` };
+      }
+
+      const versions = Object.keys(metadata?.versions || {});
+      const selected = semver.maxSatisfying(versions, range);
+
+      if (!selected) {
+        return { version: null, reason: `No version satisfies range: ${spec}` };
+      }
+
+      return { version: selected };
+    } catch (error: any) {
+      return { version: null, reason: `Failed to resolve ${name}@${spec}: ${error.message}` };
+    }
   }
 }

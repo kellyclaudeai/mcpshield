@@ -1,96 +1,112 @@
 /**
  * mcp-shield lock validate
- * 
- * Validate lockfile structure and integrity
+ *
+ * Validate lockfile structure against the canonical schema.
  */
 
-import { LockfileManager } from '@mcpshield/core';
 import chalk from 'chalk';
+import { createRequire } from 'module';
+import { LockfileManager } from '@mcpshield/core';
+import {
+  EXIT_SUCCESS,
+  EXIT_USER_ERROR,
+  getGlobalOptions,
+  logError,
+  logInfo,
+  writeJson,
+} from '../output.js';
 
-interface LockValidateOptions {
-  json?: boolean;
-  ci?: boolean;
+const require = createRequire(import.meta.url);
+const toolVersion: string = require('../../package.json').version;
+
+interface LockValidateJsonOutput {
+  tool: 'mcpshield';
+  toolVersion: string;
+  command: 'lock validate';
+  generatedAt: string;
+  valid: boolean;
+  path: string;
+  lockfile: {
+    version: string | null;
+    generatedAt: string | null;
+    serverCount: number | null;
+  };
+  errors: string[];
 }
 
-export async function lockValidateCommand(options: LockValidateOptions): Promise<number> {
+export async function lockValidateCommand(_options: { json?: boolean; ci?: boolean } = {}): Promise<number> {
+  const opts = getGlobalOptions();
   const lockfileManager = new LockfileManager();
-  
-  // Check if lockfile exists
-  const exists = await lockfileManager.exists();
-  
-  if (!exists) {
-    if (options.json) {
-      console.log(JSON.stringify({
-        valid: false,
-        error: 'Lockfile not found',
-        path: lockfileManager.getPath()
-      }, null, 2));
-    } else {
-      console.error(chalk.red('✗ No mcp.lock.json found'));
-      console.error(chalk.gray(`  Expected at: ${lockfileManager.getPath()}`));
+
+  const outputBase: Omit<LockValidateJsonOutput, 'valid' | 'errors' | 'lockfile'> = {
+    tool: 'mcpshield',
+    toolVersion,
+    command: 'lock validate',
+    generatedAt: new Date().toISOString(),
+    path: lockfileManager.getPath(),
+  };
+
+  if (!(await lockfileManager.exists())) {
+    const output: LockValidateJsonOutput = {
+      ...outputBase,
+      valid: false,
+      lockfile: { version: null, generatedAt: null, serverCount: null },
+      errors: ['Lockfile not found'],
+    };
+
+    if (opts.json) writeJson(output);
+    else {
+      logError('No mcp.lock.json found.');
+      logError(chalk.dim(`Expected at: ${lockfileManager.getPath()}`));
     }
-    return 1;
+    return EXIT_USER_ERROR;
   }
-  
-  // Read lockfile
-  let lockfile;
+
+  let lockfile: any;
   try {
     lockfile = await lockfileManager.read();
   } catch (error: any) {
-    if (options.json) {
-      console.log(JSON.stringify({
-        valid: false,
-        error: 'Failed to parse lockfile',
-        details: error.message,
-        path: lockfileManager.getPath()
-      }, null, 2));
-    } else {
-      console.error(chalk.red('✗ Failed to parse lockfile'));
-      console.error(chalk.gray(`  ${error.message}`));
-    }
-    return 1;
-  }
-  
-  // Validate
-  const validation = lockfileManager.validate(lockfile);
-  
-  if (options.json) {
-    // JSON output
-    const output: any = {
-      valid: validation.valid,
-      path: lockfileManager.getPath(),
-      version: lockfile.version,
-      generatedAt: lockfile.generatedAt,
-      serverCount: Object.keys(lockfile.servers).length
+    const output: LockValidateJsonOutput = {
+      ...outputBase,
+      valid: false,
+      lockfile: { version: null, generatedAt: null, serverCount: null },
+      errors: [`Failed to read/parse lockfile: ${error.message}`],
     };
-    
-    if (!validation.valid) {
-      output.errors = validation.errors;
+
+    if (opts.json) writeJson(output);
+    else {
+      logError('Failed to read/parse mcp.lock.json.');
+      logError(chalk.dim(error.message));
     }
-    
-    console.log(JSON.stringify(output, null, 2));
+    return EXIT_USER_ERROR;
+  }
+
+  const validation = lockfileManager.validate(lockfile);
+  const output: LockValidateJsonOutput = {
+    ...outputBase,
+    valid: validation.valid,
+    lockfile: {
+      version: typeof lockfile.version === 'string' ? lockfile.version : null,
+      generatedAt: typeof lockfile.generatedAt === 'string' ? lockfile.generatedAt : null,
+      serverCount: lockfile.servers && typeof lockfile.servers === 'object' ? Object.keys(lockfile.servers).length : null,
+    },
+    errors: validation.valid ? [] : validation.errors,
+  };
+
+  if (opts.json) {
+    writeJson(output);
+  } else if (validation.valid) {
+    logInfo(chalk.green('✓ Lockfile is valid'));
+    logInfo(chalk.dim(`Path: ${lockfileManager.getPath()}`));
+    logInfo(chalk.dim(`Servers: ${output.lockfile.serverCount ?? 0}`));
+    logInfo(chalk.dim(`Generated: ${output.lockfile.generatedAt ?? 'unknown'}`));
   } else {
-    // Human-readable output
-    if (!options.ci) {
-      console.log(chalk.bold('🔍 MCPShield Lock Validation\n'));
-    }
-    
-    if (validation.valid) {
-      console.log(chalk.green('✓ Lockfile is valid'));
-      console.log(chalk.gray(`  Path: ${lockfileManager.getPath()}`));
-      console.log(chalk.gray(`  Version: ${lockfile.version}`));
-      console.log(chalk.gray(`  Servers: ${Object.keys(lockfile.servers).length}`));
-      console.log(chalk.gray(`  Generated: ${lockfile.generatedAt}`));
-    } else {
-      console.error(chalk.red('✗ Lockfile validation failed'));
-      console.error(chalk.gray(`  Path: ${lockfileManager.getPath()}\n`));
-      
-      console.error(chalk.red('Validation errors:'));
-      validation.errors.forEach(err => {
-        console.error(chalk.red(`  • ${err}`));
-      });
+    logError('Lockfile validation failed:');
+    for (const err of output.errors) {
+      logError(`- ${err}`);
     }
   }
-  
-  return validation.valid ? 0 : 1;
+
+  return validation.valid ? EXIT_SUCCESS : EXIT_USER_ERROR;
 }
+

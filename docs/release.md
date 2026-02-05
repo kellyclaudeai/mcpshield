@@ -4,7 +4,12 @@ This document describes the release process for MCPShield packages.
 
 ## Overview
 
-MCPShield uses automated releases via GitHub Actions with npm trusted publishing (provenance). This eliminates the need for long-lived npm tokens and provides cryptographic proof of package origin.
+MCPShield uses automated releases via GitHub Actions. The release workflow supports two publishing modes:
+
+1. **Preferred:** npm trusted publishing (OIDC) with provenance (no long-lived tokens)
+2. **Fallback:** `NPM_TOKEN` secret (automation token that does not require OTP)
+
+Both modes publish packages in dependency order (`@mcpshield/core` -> `@mcpshield/scanner` -> `@mcpshield/cli`) via `scripts/publish-workspaces.mjs`.
 
 ## One-Time Setup: Configure npm Trusted Publishing
 
@@ -92,9 +97,7 @@ Once the tag is pushed, GitHub Actions will automatically:
 4. ✅ Build all packages
 5. ✅ Run tests
 6. ✅ Generate changelog from conventional commits
-7. ✅ Publish `@mcpshield/core` to npm with provenance
-8. ✅ Publish `@mcpshield/scanner` to npm with provenance
-9. ✅ Publish `@mcpshield/cli` to npm with provenance
+7. ✅ Publish all workspace packages to npm (with provenance when enabled)
 10. ✅ Create a GitHub Release with generated notes
 
 ### 4. Monitor the Release
@@ -109,8 +112,9 @@ Once the tag is pushed, GitHub Actions will automatically:
 
 ### Publish fails with authentication error
 
-- **Cause**: npm trusted publishing not configured correctly
-- **Solution**: Re-check the configuration steps above. Ensure the repository owner, name, and workflow file path are exact matches.
+- **Cause**: Neither OIDC trusted publishing nor `NPM_TOKEN` is configured
+- **Solution (OIDC)**: Re-check the trusted publishing configuration steps above. Ensure the repository owner, name, and workflow file path are exact matches.
+- **Solution (token)**: Add `NPM_TOKEN` as a GitHub Actions secret for the repository.
 
 ### Workflow fails on tests
 
@@ -146,8 +150,9 @@ If a release needs to be rolled back:
 
 ## Security
 
-- **No long-lived tokens**: npm trusted publishing uses short-lived OIDC tokens issued by GitHub
-- **Provenance**: All published packages include cryptographic attestation of their source
+- **Preferred (OIDC)**: No long-lived tokens; publishing uses short-lived OIDC tokens issued by GitHub
+- **Token fallback**: Store tokens only in GitHub secrets, never in the repo
+- **Provenance**: Published packages can include cryptographic attestation of their source
 - **Audit trail**: All releases are tracked via git tags and GitHub Releases
 
 ## Best Practices

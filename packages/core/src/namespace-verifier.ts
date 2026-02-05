@@ -108,7 +108,7 @@ export function extractPublisherIdentity(response: RegistryServerResponse): Publ
   }
   
   // Extract npm package if applicable
-  const npmPackage = server.packages.find(pkg => pkg.type === 'npm');
+  const npmPackage = server.packages.find((pkg: any) => pkg.type === 'npm' || pkg.registryType === 'npm');
   if (npmPackage) {
     identity.npm = {
       package: npmPackage.identifier,
@@ -171,7 +171,7 @@ export function verifyNamespace(
   // GitHub namespace verification
   const githubMatch = serverName.match(GITHUB_NAMESPACE_PATTERN);
   if (githubMatch) {
-    const [, namespaceOwner, serverNamePart] = githubMatch;
+    const [, namespaceOwner] = githubMatch;
     
     // Verify GitHub identity matches namespace
     if (identity.github?.owner.toLowerCase() === namespaceOwner.toLowerCase()) {

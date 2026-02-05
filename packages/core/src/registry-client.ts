@@ -15,6 +15,21 @@ export interface RegistryClientOptions {
 const DEFAULT_REGISTRY_URL = 'https://registry.modelcontextprotocol.io';
 const DEFAULT_TIMEOUT = 30000; // 30 seconds
 const DEFAULT_RETRIES = 2;
+const DEFAULT_VERSION = 'latest';
+
+function normalizeRegistryType(value: unknown): Server['packages'][number]['type'] | null {
+  if (typeof value !== 'string') return null;
+  const lower = value.toLowerCase();
+
+  if (lower === 'npm') return 'npm';
+  if (lower === 'pypi') return 'pypi';
+  if (lower === 'nuget') return 'nuget';
+  if (lower === 'mcpb') return 'mcpb';
+  if (lower === 'oci') return 'docker';
+  if (lower === 'docker') return 'docker';
+
+  return null;
+}
 
 export class RegistryClient {
   private baseUrl: string;
@@ -44,7 +59,7 @@ export class RegistryClient {
     }
 
     const encodedName = encodeURIComponent(name);
-    const url = `${this.baseUrl}/v0.1/servers/${encodedName}`;
+    const url = `${this.baseUrl}/v0/servers/${encodedName}/versions/${DEFAULT_VERSION}`;
 
     try {
       const response = await got(url, {
@@ -54,7 +69,7 @@ export class RegistryClient {
         responseType: 'json',
       });
 
-      const data = response.body as RegistryServerResponse;
+      const data = response.body as any;
 
       // Validate response structure
       if (!data.server || !data.server.name) {
@@ -65,7 +80,37 @@ export class RegistryClient {
         );
       }
 
-      return data;
+      // Normalize registry schema differences into MCPShield's internal types.
+      const normalized: RegistryServerResponse = {
+        ...data,
+        server: {
+          ...data.server,
+          packages: Array.isArray(data.server.packages)
+            ? data.server.packages
+                .map((pkg: any) => {
+                  const type =
+                    normalizeRegistryType(pkg?.type) ??
+                    normalizeRegistryType(pkg?.registryType) ??
+                    (typeof pkg?.type === 'string' ? (pkg.type as any) : null);
+
+                  if (!type) {
+                    return null;
+                  }
+
+                  return {
+                    ...pkg,
+                    type,
+                    identifier: pkg.identifier,
+                    version: pkg.version,
+                    digest: pkg.digest,
+                  };
+                })
+                .filter(Boolean)
+            : [],
+        },
+      };
+
+      return normalized;
     } catch (error: any) {
       if (error instanceof HTTPError) {
         const statusCode = error.response.statusCode;
@@ -101,13 +146,15 @@ export class RegistryClient {
     const officialMeta = response._meta?.['io.modelcontextprotocol.registry/official'];
     const server = response.server;
 
+    const npmPackage = server.packages.find((p: any) => p.type === 'npm' || p.registryType === 'npm');
+
     return {
       status: officialMeta?.status || 'community',
       github: server.repository?.url?.includes('github.com')
         ? this.parseGitHubUrl(server.repository.url)
         : undefined,
-      npm: server.packages.find(p => p.type === 'npm')
-        ? { package: server.packages.find(p => p.type === 'npm')!.identifier }
+      npm: npmPackage
+        ? { package: npmPackage.identifier }
         : undefined,
     };
   }
@@ -153,7 +200,8 @@ export class RegistryClient {
 
     // Validate each package
     for (const pkg of response.server.packages) {
-      if (!pkg.type || !pkg.identifier || !pkg.version) {
+      const pkgType = (pkg as any).type ?? (pkg as any).registryType;
+      if (!pkgType || !pkg.identifier || !pkg.version) {
         return false;
       }
     }

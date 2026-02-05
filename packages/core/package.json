@@ -2,13 +2,30 @@
   "name": "@mcpshield/core",
   "version": "0.1.0",
   "description": "Core functionality for MCPShield: registry client, lockfile manager, types",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kellyclaudeai/mcpshield.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kellyclaudeai/mcpshield/issues"
+  },
+  "homepage": "https://github.com/kellyclaudeai/mcpshield#readme",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "schemas",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -b",
     "test": "node ../../scripts/run-node-tests.mjs --import tsx test/**/*.test.ts",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
     "ajv": "^8.12.0",
@@ -16,6 +33,9 @@
     "got": "^14.0.0",
     "semver": "^7.7.4",
     "yaml": "^2.8.2"
+  },
+  "engines": {
+    "node": ">=22.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

@@ -5,9 +5,25 @@
  */
 
 import * as fs from 'fs/promises';
+import * as fsSync from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import AjvModule from 'ajv';
+import addFormatsModule from 'ajv-formats';
+import type { ValidateFunction } from 'ajv';
 
 import { LockfileEntry, LockfileData } from './types.js';
+
+const Ajv = (AjvModule as any).default || AjvModule;
+const addFormats = (addFormatsModule as any).default || addFormatsModule;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+let lockfileSchemaValidator: ValidateFunction | null = null;
+let lockfileSchemaLoadFailed = false;
+let lockfileSchemaLoadError: string | null = null;
+
 export class LockfileManager {
   private lockfilePath: string;
   
@@ -130,6 +146,27 @@ export class LockfileManager {
    * Validate lockfile structure
    */
   validate(lockfile: LockfileData): { valid: boolean; errors: string[] } {
+    const schemaValidator = this.getSchemaValidator();
+    if (schemaValidator) {
+      const valid = schemaValidator(lockfile) as boolean;
+      if (!valid && schemaValidator.errors) {
+        const errors = schemaValidator.errors.map((err) => {
+          const instancePath = err.instancePath || '/';
+          return `${instancePath}: ${err.message}`;
+        });
+        return { valid: false, errors };
+      }
+
+      return { valid: true, errors: [] };
+    }
+
+    if (lockfileSchemaLoadFailed) {
+      return {
+        valid: false,
+        errors: [lockfileSchemaLoadError || 'Schema validation unavailable'],
+      };
+    }
+
     const errors: string[] = [];
     
     if (!lockfile.version) {
@@ -160,6 +197,35 @@ export class LockfileManager {
       valid: errors.length === 0,
       errors
     };
+  }
+
+  private getSchemaValidator(): ValidateFunction | null {
+    if (lockfileSchemaLoadFailed) {
+      return null;
+    }
+
+    if (lockfileSchemaValidator) {
+      return lockfileSchemaValidator;
+    }
+
+    try {
+      const schemaPath = path.resolve(__dirname, '../schemas/mcp.lock.schema.json');
+      const schemaContent = fsSync.readFileSync(schemaPath, 'utf-8');
+      const schema = JSON.parse(schemaContent);
+
+      const ajv = new Ajv({ allErrors: true, strict: false });
+      addFormats(ajv);
+      lockfileSchemaValidator = ajv.compile(schema) as ValidateFunction;
+      return lockfileSchemaValidator;
+    } catch (error: any) {
+      // Only fall back to legacy checks if schema is missing.
+      if (error?.code === 'ENOENT') {
+        return null;
+      }
+      lockfileSchemaLoadFailed = true;
+      lockfileSchemaLoadError = `Schema load/compile failed: ${error.message}`;
+      return null;
+    }
   }
   
   /**
@@ -227,8 +293,16 @@ export class LockfileManager {
         const oldEntry = oldLockfile.servers[namespace];
         const newEntry = newLockfile.servers[namespace];
         
-        if (oldEntry.version !== newEntry.version ||
-            oldEntry.integrity !== newEntry.integrity) {
+        const canonArtifacts = (artifacts: any[] = []) =>
+          artifacts
+            .map((a) => `${a.type}|${a.url}|${a.digest}|${a.size ?? ''}`)
+            .sort()
+            .join(',');
+
+        if (
+          oldEntry.version !== newEntry.version ||
+          canonArtifacts(oldEntry.artifacts) !== canonArtifacts(newEntry.artifacts)
+        ) {
           changed.push({
             namespace,
             oldVersion: oldEntry.version,

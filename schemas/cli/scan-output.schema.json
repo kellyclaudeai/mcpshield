@@ -1,0 +1,137 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcpshield.dev/schemas/cli/scan-output.schema.json",
+  "title": "MCPShield Scan Output",
+  "description": "Machine-readable output from the mcp-shield scan command",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tool", "toolVersion", "command", "generatedAt", "summary", "results", "errors"],
+  "properties": {
+    "tool": { "type": "string", "const": "mcpshield" },
+    "toolVersion": {
+      "type": "string",
+      "description": "MCPShield tool version",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9.]+)?$"
+    },
+    "command": { "type": "string", "const": "scan" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["servers", "artifacts", "verdicts", "policy"],
+      "properties": {
+        "servers": { "type": "integer", "minimum": 0 },
+        "artifacts": { "type": "integer", "minimum": 0 },
+        "verdicts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["clean", "warning", "suspicious", "malicious", "unknown"],
+          "properties": {
+            "clean": { "type": "integer", "minimum": 0 },
+            "warning": { "type": "integer", "minimum": 0 },
+            "suspicious": { "type": "integer", "minimum": 0 },
+            "malicious": { "type": "integer", "minimum": 0 },
+            "unknown": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enforced", "blocked", "reasons"],
+          "properties": {
+            "enforced": { "type": "boolean" },
+            "blocked": { "type": "boolean" },
+            "reasons": { "type": "array", "items": { "$ref": "#/definitions/PolicyReason" } }
+          }
+        }
+      }
+    },
+    "results": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/ScanServerResult" }
+    },
+    "errors": { "type": "array", "items": { "$ref": "#/definitions/ErrorItem" } }
+  },
+  "definitions": {
+    "Digest": {
+      "type": "string",
+      "pattern": "^(sha256|sha512)-[A-Za-z0-9+/=]+$"
+    },
+    "ErrorItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message"],
+      "properties": {
+        "code": { "type": "string" },
+        "message": { "type": "string" },
+        "details": { "type": ["object", "null"] }
+      }
+    },
+    "PolicyReason": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message"],
+      "properties": {
+        "code": { "type": "string" },
+        "message": { "type": "string" }
+      }
+    },
+    "ScanFinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ruleId", "severity", "category", "message", "details"],
+      "properties": {
+        "ruleId": { "type": "string" },
+        "severity": { "type": "string", "enum": ["critical", "high", "medium", "low", "info"] },
+        "category": { "type": "string" },
+        "message": { "type": "string" },
+        "details": { "type": ["object", "null"] }
+      }
+    },
+    "VulnerabilityCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["critical", "high", "medium", "low"],
+      "properties": {
+        "critical": { "type": "integer", "minimum": 0 },
+        "high": { "type": "integer", "minimum": 0 },
+        "medium": { "type": "integer", "minimum": 0 },
+        "low": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "ScanArtifactResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "digest", "verdict", "riskScore", "findings", "vulnerabilities"],
+      "properties": {
+        "type": { "type": "string" },
+        "digest": { "$ref": "#/definitions/Digest" },
+        "verdict": { "type": "string", "enum": ["clean", "warning", "suspicious", "malicious", "unknown"] },
+        "riskScore": { "type": "number", "minimum": 0, "maximum": 100 },
+        "findings": { "type": "array", "items": { "$ref": "#/definitions/ScanFinding" } },
+        "vulnerabilities": { "$ref": "#/definitions/VulnerabilityCounts" }
+      }
+    },
+    "ScanServerResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["namespace", "version", "artifacts", "policy", "errors"],
+      "properties": {
+        "namespace": { "type": "string" },
+        "version": { "type": "string" },
+        "artifacts": { "type": "array", "items": { "$ref": "#/definitions/ScanArtifactResult" } },
+        "policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["blocked", "reasons"],
+          "properties": {
+            "blocked": { "type": "boolean" },
+            "reasons": { "type": "array", "items": { "$ref": "#/definitions/PolicyReason" } }
+          }
+        },
+        "errors": { "type": "array", "items": { "$ref": "#/definitions/ErrorItem" } }
+      }
+    }
+  }
+}
+

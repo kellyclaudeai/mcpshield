@@ -1,229 +1,122 @@
 /**
- * Policy enforcement E2E tests
- * 
- * Tests that policy enforcement works correctly in CLI commands
+ * Policy enforcement E2E tests (deterministic)
+ *
+ * These tests intentionally avoid relying on built `dist/` artifacts or live
+ * network calls. They focus on validating that the repo's default `init`
+ * output produces a policy.yaml that matches the canonical schema.
  */
 
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { describe, test } from 'node:test';
+import assert from 'node:assert/strict';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
 
-const execAsync = promisify(exec);
+import { initCommand } from '../../packages/cli/src/commands/init.js';
+import { scanCommand } from '../../packages/cli/src/commands/scan.js';
+import { setGlobalOptions } from '../../packages/cli/src/output.js';
+import { loadPolicy, validatePolicy } from '../../packages/core/src/policy.js';
+import { CacheManager, DigestVerifier } from '@mcpshield/core';
+import * as tar from 'tar';
 
 describe('Policy Enforcement E2E', () => {
-  let tempDir: string;
-  let cliPath: string;
-  
-  beforeAll(() => {
-    // Path to CLI executable
-    cliPath = path.resolve(__dirname, '../../packages/cli/dist/cli.js');
-  });
-  
-  beforeEach(async () => {
-    // Create temp directory for each test
-    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mcpshield-policy-e2e-'));
-    
-    // Initialize MCPShield in temp directory
-    await execAsync(`node "${cliPath}" init`, { cwd: tempDir });
-  });
-  
-  afterEach(async () => {
-    // Clean up temp directory
+  test('init generates a policy.yaml that validates against schema', async () => {
+    const originalCwd = process.cwd();
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mcpshield-policy-e2e-'));
+
     try {
+      process.chdir(tempDir);
+
+      await initCommand();
+
+      const policyPath = path.join(tempDir, 'policy.yaml');
+      await fs.access(policyPath);
+
+      const policy = await loadPolicy(policyPath);
+      assert.ok(policy, 'policy.yaml should parse');
+
+      const validation = await validatePolicy(policy!);
+      assert.equal(validation.valid, true, validation.errors?.join('\n') ?? 'Policy should be valid');
+    } finally {
+      process.chdir(originalCwd);
       await fs.rm(tempDir, { recursive: true, force: true });
-    } catch (err) {
-      // Ignore cleanup errors
     }
   });
-  
-  describe('add command with policy', () => {
-    it('should block server exceeding risk score in --ci mode', async () => {
-      // Create policy with low risk threshold
-      const policy = `
-version: "1.0"
-global:
-  maxRiskScore: 20
-  blockSeverities:
-    - critical
-`;
-      await fs.writeFile(path.join(tempDir, 'policy.yaml'), policy);
-      
-      // Try to add a server with high risk (this will fail because we can't control scan results easily)
-      // For now, we'll use a real server that might have findings
-      try {
-        await execAsync(`node "${cliPath}" add io.github.test/server --yes --ci`, {
-          cwd: tempDir,
-        });
-        // If it succeeds, that's fine - we can't guarantee a high-risk package
-      } catch (err: any) {
-        // Should fail with exit code 1 if policy blocks it
-        expect(err.code).toBe(1);
-      }
-    });
-    
-    it('should allow override in interactive mode', async () => {
-      // This test would require interactive input, so we skip it in automated tests
-      // Interactive behavior is tested manually
-    });
-  });
-  
-  describe('scan command with policy', () => {
-    it('should fail when server violates maxRiskScore in --ci mode', async () => {
-      // Create a policy with very strict risk score
-      const policy = `
-version: "1.0"
-global:
-  maxRiskScore: 0
-  blockSeverities:
-    - critical
-    - high
-    - medium
-    - low
-`;
-      await fs.writeFile(path.join(tempDir, 'policy.yaml'), policy);
-      
-      // Add a server first (without policy enforcement)
-      await fs.unlink(path.join(tempDir, 'policy.yaml'));
-      
-      try {
-        // Add a real server
-        await execAsync(`node "${cliPath}" add @modelcontextprotocol/server-everything --yes`, {
-          cwd: tempDir,
-          timeout: 60000,
-        });
-      } catch (err) {
-        // If add fails, skip this test
-        console.log('Could not add server for test, skipping');
-        return;
-      }
-      
-      // Re-create strict policy
-      await fs.writeFile(path.join(tempDir, 'policy.yaml'), policy);
-      
-      // Scan should fail with policy violations
-      try {
-        const { stdout, stderr } = await execAsync(`node "${cliPath}" scan --ci`, {
-          cwd: tempDir,
-          timeout: 60000,
-        });
-        
-        // If it doesn't throw, check if it found violations
-        // With maxRiskScore: 0, most packages will fail
-        console.log('Scan output:', stdout);
-      } catch (err: any) {
-        // Should exit with code 1 due to policy violation
-        expect(err.code).toBe(1);
-        expect(err.stdout || err.stderr).toMatch(/policy|violation|exceeds/i);
-      }
-    });
-    
-    it('should pass when all servers meet policy requirements', async () => {
-      // Create a permissive policy
-      const policy = `
-version: "1.0"
-global:
-  maxRiskScore: 100
-  blockSeverities:
-    - critical
-`;
-      await fs.writeFile(path.join(tempDir, 'policy.yaml'), policy);
-      
-      // Add a well-known server
-      try {
-        await execAsync(`node "${cliPath}" add @modelcontextprotocol/server-everything --yes`, {
-          cwd: tempDir,
-          timeout: 60000,
-        });
-      } catch (err) {
-        console.log('Could not add server for test, skipping');
-        return;
-      }
-      
-      // Scan should pass
-      const { stdout } = await execAsync(`node "${cliPath}" scan --ci`, {
-        cwd: tempDir,
-        timeout: 60000,
-      });
-      
-      expect(stdout).toMatch(/Policy Evaluation|All servers pass/i);
-    });
-    
-    it('should enforce blockSeverities correctly', async () => {
-      // Create policy blocking critical findings
-      const policy = `
-version: "1.0"
-global:
-  maxRiskScore: 100
-  blockSeverities:
-    - critical
-`;
-      await fs.writeFile(path.join(tempDir, 'policy.yaml'), policy);
-      
-      // This test depends on finding a package with critical findings
-      // In practice, most clean packages won't have critical findings
-      // So this test serves as documentation of expected behavior
-    });
-  });
-  
-  describe('namespace allowlist/denylist', () => {
-    it('should block servers not in allowlist', async () => {
-      const policy = `
-version: "1.0"
-global:
-  allowNamespaces:
-    - "io.github.myorg/*"
-`;
-      await fs.writeFile(path.join(tempDir, 'policy.yaml'), policy);
-      
-      // Try to add a server outside allowlist
-      try {
-        await execAsync(`node "${cliPath}" add @modelcontextprotocol/server-everything --yes --ci`, {
-          cwd: tempDir,
-          timeout: 60000,
-        });
-        fail('Should have blocked server not in allowlist');
-      } catch (err: any) {
-        expect(err.code).toBe(1);
-        expect(err.stderr || err.stdout).toMatch(/not in allowlist|policy/i);
-      }
-    });
-    
-    it('should block servers in denylist', async () => {
-      const policy = `
-version: "1.0"
-global:
-  denyNamespaces:
-    - "@modelcontextprotocol/*"
-`;
-      await fs.writeFile(path.join(tempDir, 'policy.yaml'), policy);
-      
-      // Try to add a server in denylist
-      try {
-        await execAsync(`node "${cliPath}" add @modelcontextprotocol/server-everything --yes --ci`, {
-          cwd: tempDir,
-          timeout: 60000,
-        });
-        fail('Should have blocked server in denylist');
-      } catch (err: any) {
-        expect(err.code).toBe(1);
-        expect(err.stderr || err.stdout).toMatch(/denied|denylist|policy/i);
-      }
-    });
-  });
-  
-  describe('verification requirements', () => {
-    it('should block unverified servers when denyUnverified is true', async () => {
-      const policy = `
-version: "1.0"
-global:
-  denyUnverified: true
-`;
-      await fs.writeFile(path.join(tempDir, 'policy.yaml'), policy);
-      
-      // This test depends on finding an unverified server
-      // Most official MCP servers are verified, so this might pass
-    });
+
+  test('scan enforces maxRiskScore in --ci mode (offline, deterministic)', async () => {
+    const originalCwd = process.cwd();
+    const originalCacheDir = process.env.MCPSHIELD_CACHE_DIR;
+
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mcpshield-policy-e2e-'));
+    const cacheDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mcpshield-cache-e2e-'));
+    process.env.MCPSHIELD_CACHE_DIR = cacheDir;
+
+    try {
+      // Create a tarball that will deterministically trigger a non-zero risk score.
+      const pkgRoot = path.join(tempDir, 'pkg');
+      const packageDir = path.join(pkgRoot, 'package');
+      await fs.mkdir(packageDir, { recursive: true });
+      await fs.writeFile(
+        path.join(packageDir, 'package.json'),
+        JSON.stringify({ name: 'risk-package', version: '1.0.0' }, null, 2)
+      );
+      await fs.writeFile(path.join(packageDir, 'index.js'), 'eval("1+1")\n');
+
+      const tarballPath = path.join(tempDir, 'risk.tgz');
+      await tar.create({ gzip: true, file: tarballPath, cwd: pkgRoot }, ['package']);
+
+      const digest = await DigestVerifier.computeDigest(tarballPath, 'sha256');
+      const cache = new CacheManager(cacheDir);
+      await cache.put(digest, tarballPath);
+
+      const lockfile = {
+        version: '1.0.0',
+        generatedAt: new Date().toISOString(),
+        servers: {
+          'io.github.example/server': {
+            namespace: 'io.github.example/server',
+            version: '1.0.0',
+            verified: true,
+            fetchedAt: new Date().toISOString(),
+            artifacts: [
+              {
+                type: 'npm',
+                url: 'https://registry.npmjs.org/risk-package/-/risk-package-1.0.0.tgz',
+                digest,
+                size: (await fs.stat(tarballPath)).size,
+              },
+            ],
+          },
+        },
+      };
+      await fs.writeFile(path.join(tempDir, 'mcp.lock.json'), JSON.stringify(lockfile, null, 2));
+
+      // Enforce a strict policy: riskScore must be 0.
+      await fs.writeFile(
+        path.join(tempDir, 'policy.yaml'),
+        [
+          'version: "1.0"',
+          'global:',
+          '  maxRiskScore: 0',
+          '  blockSeverities:',
+          '    - critical',
+          'servers: []',
+          '',
+        ].join('\n')
+      );
+
+      process.chdir(tempDir);
+      setGlobalOptions({ quiet: true, color: false });
+
+      const exitCode = await scanCommand({ ci: true, offline: true });
+      assert.equal(exitCode, 1);
+    } finally {
+      process.chdir(originalCwd);
+      if (originalCacheDir !== undefined) process.env.MCPSHIELD_CACHE_DIR = originalCacheDir;
+      else delete process.env.MCPSHIELD_CACHE_DIR;
+
+      await fs.rm(cacheDir, { recursive: true, force: true });
+      await fs.rm(tempDir, { recursive: true, force: true });
+    }
   });
 });

@@ -1,213 +1,240 @@
 /**
- * mcp-shield add - Add an MCP server to your project
- * 
- * Full workflow:
- * 1. Fetch server metadata from registry
- * 2. Verify namespace ownership
- * 3. Download artifact
- * 4. Verify digest
- * 5. Run security scan
- * 6. Generate policy stub
- * 7. Write to lockfile
- * 8. Interactive approval
+ * mcp-shield add
+ *
+ * Add an MCP server to the project lockfile:
+ * - Fetch server metadata from the registry
+ * - Verify namespace ownership (best-effort)
+ * - Resolve + download npm artifacts, verify digest
+ * - Scan artifacts for security risks
+ * - Evaluate policy and (optionally) require approval/override
+ * - Write pinned artifact digests to mcp.lock.json
  */
 
+import * as fs from 'fs/promises';
+import * as os from 'os';
+import * as path from 'path';
 import chalk from 'chalk';
 import prompts from 'prompts';
+import { createRequire } from 'module';
 import {
-  RegistryClient,
-  verifyNamespace,
-  isValidNamespaceFormat,
-  LockfileManager,
-  LockfileEntry,
-  NpmResolver,
   CacheManager,
+  Finding,
+  LockfileEntry,
+  LockfileManager,
+  NpmResolver,
+  RegistryClient,
+  RegistryError,
+  evaluateAdd,
+  isValidNamespaceFormat,
   loadPolicy,
   validatePolicy,
-  evaluateAdd,
-  PolicyEvaluationResult,
+  verifyNamespace,
 } from '@mcpshield/core';
 import { BasicScanner } from '@mcpshield/scanner';
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import * as os from 'os';
+import {
+  EXIT_GENERAL_FAILURE,
+  EXIT_SUCCESS,
+  debugLog,
+  getGlobalOptions,
+  logError,
+  logInfo,
+  logWarn,
+  writeJson,
+  UserError,
+} from '../output.js';
 
-/**
- * Add command handler
- */
-export async function addCommand(serverName: string, options: { yes?: boolean; ci?: boolean } = {}): Promise<void> {
-  const isNonInteractive = options.yes || options.ci;
-  console.log(chalk.blue(`\n📦 Adding MCP server: ${serverName}\n`));
+const require = createRequire(import.meta.url);
+const toolVersion: string = require('../../package.json').version;
 
-  // Step 1: Validate namespace format
-  console.log(chalk.dim('→ Validating namespace format...'));
-  if (!isValidNamespaceFormat(serverName)) {
-    console.error(
-      chalk.red(`✗ Invalid namespace format\n`) +
-      chalk.dim(`  Expected: reverse-DNS format like io.github.user/server-name\n`) +
-      chalk.dim(`  Got: ${serverName}`)
-    );
-    process.exit(1);
+interface ErrorItem {
+  code: string;
+  message: string;
+  details?: Record<string, unknown> | null;
+}
+
+interface PolicyReason {
+  code: string;
+  message: string;
+}
+
+interface AddJsonOutput {
+  tool: 'mcpshield';
+  toolVersion: string;
+  command: 'add';
+  generatedAt: string;
+  input: { namespace: string; yes: boolean; ci: boolean };
+  result: {
+    added: boolean;
+    entryWritten: boolean;
+    policy: { blocked: boolean; reasons: PolicyReason[] };
+  };
+  errors: ErrorItem[];
+}
+
+export interface AddCommandOptions {
+  yes?: boolean;
+  ci?: boolean;
+}
+
+function toPolicyReasons(reasons: string[]): PolicyReason[] {
+  return reasons.map((reason) => {
+    if (/^Risk score \\d+ exceeds/.test(reason)) {
+      return { code: 'MAX_RISK_SCORE', message: reason };
+    }
+    if (/not verified/i.test(reason)) {
+      return { code: 'DENY_UNVERIFIED', message: reason };
+    }
+    if (/allowlist/i.test(reason)) {
+      return { code: 'ALLOWLIST', message: reason };
+    }
+    if (/den(y|ied)/i.test(reason)) {
+      return { code: 'DENYLIST', message: reason };
+    }
+    if (/blocked severity/i.test(reason)) {
+      return { code: 'BLOCK_SEVERITY', message: reason };
+    }
+    return { code: 'POLICY', message: reason };
+  });
+}
+
+function summarizeFindings(findings: Finding[]): { critical: number; high: number; medium: number; low: number; info: number } {
+  const counts = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
+  for (const finding of findings) {
+    counts[finding.severity] += 1;
   }
-  console.log(chalk.green('✓ Valid namespace format'));
+  return counts;
+}
 
-  // Step 2: Fetch from registry
-  console.log(chalk.dim('\n→ Fetching metadata from registry...'));
+function renderVerification(verification: ReturnType<typeof verifyNamespace>): string {
+  if (verification.verified) {
+    const method = verification.method ? ` (${verification.method})` : '';
+    return chalk.green(`verified${method}`);
+  }
+  const reason = verification.details?.reason ? `: ${verification.details.reason}` : '';
+  return chalk.yellow(`unverified${reason ? reason : ''}`);
+}
+
+export async function addCommand(serverName: string, options: AddCommandOptions = {}): Promise<number> {
+  const startTime = Date.now();
+  const opts = getGlobalOptions();
+  const isNonInteractive = Boolean(opts.ci || options.ci || options.yes);
+
+  if (opts.json && !isNonInteractive) {
+    throw new UserError('Refusing to prompt in --json mode. Re-run with --yes or --ci.');
+  }
+
+  const errors: ErrorItem[] = [];
+  let policyBlocked = false;
+  let policyReasons: PolicyReason[] = [];
+
+  const jsonOutputBase: Omit<AddJsonOutput, 'result'> = {
+    tool: 'mcpshield',
+    toolVersion,
+    command: 'add',
+    generatedAt: new Date().toISOString(),
+    input: { namespace: serverName, yes: Boolean(options.yes), ci: Boolean(options.ci || opts.ci) },
+    errors,
+  };
+
+  if (!isValidNamespaceFormat(serverName)) {
+    throw new UserError(
+      `Invalid namespace format: ${serverName}\nExpected reverse-DNS format like io.github.user/server-name`
+    );
+  }
+
+  if (!opts.json) {
+    logInfo(chalk.blue(`Adding MCP server: ${serverName}`));
+  }
+
   const client = new RegistryClient();
   let response;
-  
   try {
     response = await client.getServer(serverName);
   } catch (error: any) {
-    console.error(
-      chalk.red('\n✗ Failed to fetch server from registry\n') +
-      chalk.dim(`  ${error.message}`)
-    );
-    process.exit(1);
+    if (error instanceof RegistryError && error.statusCode === 404) {
+      throw new UserError(error.message);
+    }
+    throw error;
   }
 
   const server = response.server;
-  console.log(chalk.green('✓ Server found in registry'));
-
-  // Step 3: Verify namespace ownership
-  console.log(chalk.dim('\n→ Verifying namespace ownership...'));
   const verification = verifyNamespace(serverName, response);
 
-  if (verification.verified) {
-    console.log(
-      chalk.green(`✓ Namespace verified`) +
-      chalk.dim(` (${verification.method})`)
-    );
-  } else {
-    console.log(
-      chalk.yellow(`⚠ Namespace not verified`) +
-      chalk.dim(`\n  ${verification.details?.reason || 'Unknown reason'}`)
-    );
+  if (!opts.json) {
+    logInfo(`Registry: ${chalk.bold(server.name)} @ ${server.version}`);
+    logInfo(`Namespace: ${renderVerification(verification)}`);
+    logInfo(chalk.dim(`Packages: ${server.packages.length}`));
   }
 
-  // Step 4: Display server details
-  console.log(chalk.bold('\n📋 Server Details:\n'));
-  console.log(`  ${chalk.bold('Name:')} ${server.name}`);
-  console.log(`  ${chalk.bold('Version:')} ${server.version}`);
-  console.log(`  ${chalk.bold('Description:')} ${server.description}`);
-  
-  if (server.repository?.url) {
-    console.log(`  ${chalk.bold('Repository:')} ${server.repository.url}`);
-  }
-
-  const identity = client.extractPublisherIdentity(response);
-  console.log(`\n  ${chalk.bold('Publisher Status:')} ${formatStatus(identity.status)}`);
-  
-  if (identity.github) {
-    console.log(`  ${chalk.bold('GitHub:')} ${identity.github.owner}/${identity.github.repo}`);
-  }
-  
-  if (identity.npm) {
-    console.log(`  ${chalk.bold('NPM Package:')} ${identity.npm.package}`);
-  }
-
-  console.log(`\n  ${chalk.bold('Packages:')} ${server.packages.length}`);
-  server.packages.forEach(pkg => {
-    console.log(`    • ${chalk.cyan(pkg.type)}: ${pkg.identifier}@${pkg.version}`);
-  });
-
-  // Step 5: Download and verify artifacts
-  console.log(chalk.bold('\n📥 Downloading artifacts...\n'));
-  
-  const artifacts: Array<{ type: string; url: string; digest: string; size?: number; scanResult?: any }> = [];
   const cache = new CacheManager();
+  const resolver = new NpmResolver();
   const scanner = new BasicScanner();
-  
+  const lockArtifacts: NonNullable<LockfileEntry['artifacts']> = [];
+
+  const allFindings: Finding[] = [];
+  let maxRiskScore = 0;
+
   for (const pkg of server.packages) {
-    console.log(chalk.dim(`→ Processing ${pkg.type} package: ${pkg.identifier}@${pkg.version}`));
-    
-    try {
-      if (pkg.type === 'npm') {
-        const resolver = new NpmResolver();
-        const result = await resolver.resolve(`${pkg.identifier}@${pkg.version}`);
-        
-        // Download to temp file
-        const tempPath = path.join(os.tmpdir(), `mcpshield-${Date.now()}.tgz`);
-        const digest = await resolver.download(result.artifact, tempPath);
-        
-        console.log(chalk.green(`  ✓ Downloaded and verified`));
-        console.log(chalk.dim(`    Digest: ${digest}`));
-        
-        // Store in cache
-        await cache.put(digest, tempPath);
-        
-        // Step 6: Run security scan
-        console.log(chalk.dim('  → Running security scan...'));
-        const buffer = await fs.readFile(tempPath);
-        const scanResult = await scanner.scanPackage(pkg, buffer);
-        
-        artifacts.push({
-          type: pkg.type,
-          url: result.artifact.url,
-          digest,
-          size: result.artifact.size,
-          scanResult,
-        });
-        
-        console.log(`  ${formatVerdict(scanResult.verdict)} Risk Score: ${scanResult.riskScore}/100`);
-        
-        if (scanResult.findings.length > 0) {
-          console.log(chalk.dim(`  → ${scanResult.findings.length} finding(s):`));
-          for (const finding of scanResult.findings.slice(0, 3)) {
-            const icon = getSeverityIcon(finding.severity);
-            console.log(`     ${icon} ${chalk.dim(finding.category)}: ${finding.message}`);
-          }
-          if (scanResult.findings.length > 3) {
-            console.log(chalk.dim(`     ... and ${scanResult.findings.length - 3} more`));
-          }
-        }
-        
-        // Clean up temp file
-        await fs.unlink(tempPath);
-        
-      } else if (pkg.type === 'pypi') {
-        console.log(chalk.yellow(`  ⚠ PyPI packages not fully supported yet`));
-      } else {
-        console.log(chalk.dim(`  → Skipping ${pkg.type} package (not yet supported)`));
+    if (pkg.type !== 'npm') {
+      if (!opts.json) {
+        logWarn(chalk.dim(`Skipping unsupported package type for Pilot: ${pkg.type} (${pkg.identifier}@${pkg.version})`));
       }
-    } catch (err: any) {
-      console.error(chalk.red(`  ✗ Failed: ${err.message}`));
+      continue;
     }
-  }
-  
-  if (artifacts.length === 0) {
-    console.error(chalk.red('\n✗ No artifacts could be downloaded. Aborting.'));
-    process.exit(1);
+
+    const id = `${pkg.identifier}@${pkg.version}`;
+    if (!opts.json) logInfo(chalk.dim(`Resolving ${id}…`));
+
+    const resolved = await resolver.resolve(id);
+    const tempPath = path.join(os.tmpdir(), `mcpshield-add-${process.pid}-${Date.now()}.tgz`);
+
+    try {
+      const digest = await resolver.download(resolved.artifact, tempPath);
+      await cache.put(digest, tempPath);
+
+      const buffer = await fs.readFile(tempPath);
+      const scanResult = await scanner.scanPackage(pkg, buffer);
+
+      maxRiskScore = Math.max(maxRiskScore, scanResult.riskScore);
+      allFindings.push(...scanResult.findings);
+
+      lockArtifacts.push({
+        type: 'npm',
+        url: resolved.artifact.url,
+        digest,
+        size: resolved.artifact.size,
+      });
+
+      if (!opts.json) {
+        const counts = summarizeFindings(scanResult.findings);
+        const verdictColor =
+          scanResult.verdict === 'clean'
+            ? chalk.green
+            : scanResult.verdict === 'warning'
+              ? chalk.yellow
+              : chalk.red;
+        logInfo(
+          `${verdictColor(scanResult.verdict.toUpperCase())} risk=${scanResult.riskScore}/100 findings=${counts.critical + counts.high + counts.medium + counts.low + counts.info}`
+        );
+      }
+    } finally {
+      await fs.unlink(tempPath).catch(() => {});
+    }
   }
 
-  // Step 7: Policy evaluation
-  console.log(chalk.dim('\n→ Evaluating policy...'));
-  
-  const policy = await loadPolicy();
-  let policyResult: PolicyEvaluationResult = { allowed: true, reasons: [] };
-  let allFindings: any[] = [];
-  let maxRiskScore = 0;
-  
-  // Collect all findings and max risk score from scans
-  for (const artifact of artifacts) {
-    if ((artifact as any).scanResult) {
-      const scanResult = (artifact as any).scanResult;
-      allFindings.push(...scanResult.findings);
-      maxRiskScore = Math.max(maxRiskScore, scanResult.riskScore);
-    }
+  if (lockArtifacts.length === 0) {
+    throw new UserError('No supported artifacts found for this server (Pilot supports npm only).');
   }
-  
+
+  // Policy evaluation
+  const policy = await loadPolicy();
   if (policy) {
-    const validation = await validatePolicy(policy);
-    if (!validation.valid) {
-      console.error(
-        chalk.red('\n✗ Invalid policy configuration:\n') +
-        validation.errors!.map(e => chalk.dim(`  - ${e}`)).join('\n')
-      );
-      process.exit(1);
+    const policyValidation = await validatePolicy(policy);
+    if (!policyValidation.valid) {
+      throw new UserError(`Invalid policy configuration:\n- ${policyValidation.errors?.join('\n- ')}`);
     }
-    
-    policyResult = evaluateAdd({
+
+    const decision = evaluateAdd({
       serverName,
       verified: verification.verified,
       verificationMethod: verification.method,
@@ -215,130 +242,124 @@ export async function addCommand(serverName: string, options: { yes?: boolean; c
       findings: allFindings,
       policy,
     });
-    
-    if (!policyResult.allowed) {
-      console.log(chalk.red('✗ Policy check failed'));
-      console.log(chalk.red('\nReasons:'));
-      policyResult.reasons.forEach(reason => {
-        console.log(chalk.red(`  • ${reason}`));
-      });
-      
-      if (isNonInteractive) {
-        // In CI/non-interactive mode, output JSON and exit
-        console.error(JSON.stringify({
-          error: 'policy_violation',
-          serverName,
-          reasons: policyResult.reasons,
-        }, null, 2));
-        process.exit(1);
-      } else {
-        // In interactive mode, prompt for override
-        console.log();
-        const { override } = await prompts({
-          type: 'confirm',
-          name: 'override',
-          message: chalk.yellow('Policy check failed. Override and continue anyway?'),
-          initial: false,
-        });
-        
-        if (!override) {
-          console.log(chalk.yellow('\n⚠ Aborted. Server not added.'));
-          process.exit(1);
-        }
-        
-        console.log(chalk.yellow('\n⚠ Policy override granted. Proceeding with caution...'));
-      }
-    } else {
-      console.log(chalk.green('✓ Policy check passed'));
-      
-      if (policyResult.requiresApproval) {
-        console.log(chalk.yellow('⚠ This server requires approval due to sensitive capabilities'));
-      }
+
+    if (!decision.allowed) {
+      policyBlocked = true;
+      policyReasons = toPolicyReasons(decision.reasons);
+    } else if (decision.requiresApproval && !opts.json) {
+      logWarn(chalk.yellow('Policy: manual approval recommended for this server.'));
     }
-  } else {
-    console.log(chalk.dim('  (No policy.yaml found, skipping policy check)'));
+  } else if ((options.ci || opts.ci) && !opts.json) {
+    logWarn(chalk.yellow('No policy.yaml found; continuing without policy enforcement.'));
   }
 
-  // Step 8: Interactive approval
+  if (policyBlocked) {
+    if (isNonInteractive) {
+      const output: AddJsonOutput = {
+        ...jsonOutputBase,
+        result: { added: false, entryWritten: false, policy: { blocked: true, reasons: policyReasons } },
+      };
+      if (opts.json) {
+        writeJson(output);
+      } else {
+        logError('Policy check failed:');
+        for (const reason of policyReasons) {
+          logError(`- ${reason.message}`);
+        }
+      }
+      return EXIT_GENERAL_FAILURE;
+    }
+
+    if (!opts.json) {
+      logError('Policy check failed:');
+      for (const reason of policyReasons) {
+        logError(`- ${reason.message}`);
+      }
+    }
+
+    const { override } = await prompts({
+      type: 'confirm',
+      name: 'override',
+      message: 'Override policy and add anyway?',
+      initial: false,
+    });
+
+    if (!override) {
+      if (opts.json) {
+        writeJson({
+          ...jsonOutputBase,
+          result: { added: false, entryWritten: false, policy: { blocked: true, reasons: policyReasons } },
+        } satisfies AddJsonOutput);
+      }
+      return EXIT_GENERAL_FAILURE;
+    }
+  }
+
+  // Confirmation prompt (interactive only)
   if (!isNonInteractive) {
-    console.log();
     const { approve } = await prompts({
       type: 'confirm',
       name: 'approve',
-      message: 'Add this server to mcp.lock.json?',
+      message: 'Write this server to mcp.lock.json?',
       initial: true,
     });
-    
+
     if (!approve) {
-      console.log(chalk.yellow('\n⚠ Aborted. Server not added.'));
-      return;
+      if (opts.json) {
+        writeJson({
+          ...jsonOutputBase,
+          result: { added: false, entryWritten: false, policy: { blocked: false, reasons: [] } },
+        } satisfies AddJsonOutput);
+      }
+      return EXIT_SUCCESS;
     }
   }
 
-  // Step 9: Write to lockfile
-  console.log(chalk.dim('\n→ Updating lockfile...'));
-  
   const lockfileManager = new LockfileManager();
-  
+  const currentLockfile = await lockfileManager.read();
+  const lockfileValidation = lockfileManager.validate(currentLockfile);
+  if (!lockfileValidation.valid) {
+    throw new UserError(`Lockfile validation failed:\n- ${lockfileValidation.errors.join('\n- ')}`);
+  }
   const entry: LockfileEntry = {
-    namespace: server.name,
+    namespace: serverName,
     version: server.version,
-    resolved: response.server.repository?.url,
+    resolved: server.repository?.url ?? null,
+    repository: server.repository?.url ?? null,
     verified: verification.verified,
-    verificationMethod: verification.method,
-    verifiedOwner: verification.details?.githubOwner || null,
+    verificationMethod: verification.method ?? null,
+    verifiedOwner: verification.details?.githubOwner ?? null,
     fetchedAt: new Date().toISOString(),
-    artifacts,
+    artifacts: lockArtifacts.sort((a, b) => {
+      const typeCmp = a.type.localeCompare(b.type);
+      if (typeCmp !== 0) return typeCmp;
+      return a.url.localeCompare(b.url);
+    }),
+    ...(policyBlocked
+      ? {
+          approvedAt: new Date().toISOString(),
+          approvedBy: process.env.MCPSHIELD_APPROVER || os.userInfo().username,
+        }
+      : {}),
   };
-  
+
   await lockfileManager.addServer(entry);
-  
-  console.log(chalk.green('✓ Server added to mcp.lock.json'));
-  console.log(chalk.dim('\nNext steps:'));
-  console.log(chalk.dim('  • Run `mcp-shield verify` to re-verify all servers'));
-  console.log(chalk.dim('  • Run `mcp-shield scan` for a security report'));
-  console.log(chalk.dim('  • Edit policy.yaml to configure server policies\n'));
-}
 
-function formatStatus(status: string | undefined): string {
-  switch (status) {
-    case 'official':
-      return chalk.green('✓ Official');
-    case 'verified':
-      return chalk.blue('✓ Verified');
-    case 'community':
-      return chalk.yellow('Community');
-    default:
-      return chalk.gray('Unknown');
+  if (!opts.json) {
+    logInfo(chalk.green('✓ Added to mcp.lock.json'));
   }
-}
 
-function formatVerdict(verdict: string): string {
-  switch (verdict) {
-    case 'clean':
-      return chalk.green('✓ Clean');
-    case 'warning':
-      return chalk.yellow('⚠ Warning');
-    case 'suspicious':
-      return chalk.red('⚠ Suspicious');
-    case 'malicious':
-      return chalk.red('✗ Malicious');
-    default:
-      return chalk.gray('? Unknown');
-  }
-}
+  const output: AddJsonOutput = {
+    ...jsonOutputBase,
+    result: {
+      added: true,
+      entryWritten: true,
+      policy: { blocked: false, reasons: [] },
+    },
+  };
 
-function getSeverityIcon(severity: string): string {
-  switch (severity) {
-    case 'critical':
-      return chalk.red('●');
-    case 'high':
-      return chalk.red('●');
-    case 'medium':
-      return chalk.yellow('●');
-    case 'low':
-      return chalk.blue('●');
-    default:
-      return chalk.gray('●');
-  }
+  if (opts.json) writeJson(output);
+
+  debugLog(`add completed in ${Date.now() - startTime}ms`);
+  return EXIT_SUCCESS;
 }

@@ -256,13 +256,13 @@ describe('output module', () => {
       assert.strictEqual(output, '');
     });
 
-    it('should output in --quiet mode (warnings not suppressed)', () => {
+    it('should suppress output in --quiet mode', () => {
       setGlobalOptions({ quiet: true });
       
       logWarn('warning message');
       
       const output = stderrBuffer.join('');
-      assert.ok(output.includes('warning message'));
+      assert.strictEqual(output, '');
     });
   });
 

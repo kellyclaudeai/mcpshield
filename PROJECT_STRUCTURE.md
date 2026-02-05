@@ -182,25 +182,27 @@ node packages/cli/dist/cli.js [command]
 
 **After npm publish** (future):
 ```bash
-npx mcp-shield [command]
-# or
+npx @mcpshield/cli [command]
+
+# or install globally
 npm install -g @mcpshield/cli
 mcp-shield [command]
 ```
 
 ## What's Implemented
 
-### ✅ Fully Functional
-- TypeScript build system
-- Registry client with full test coverage
-- CLI framework with test command
-- Type system for all entities
+### ✅ Production-Pilot Ready
+- Lockfile management with schema validation and atomic writes
+- MCP Registry integration (v0 endpoints)
+- Artifact resolution for npm (cache, offline mode, timeouts/redirect limits)
+- Scanner with safe extraction and rule taxonomy
+- Dependency vulnerability reporting via OSV (Pilot: direct dependencies)
+- CLI commands: init/add/verify/scan/lock validate/cache gc/cache purge/doctor
+- Deterministic JSON output and SARIF output for GitHub Code Scanning
 
-### 🚧 Placeholder/Structure Only
-- Scanner implementation (types defined)
-- CLI commands (structure ready)
-- Lockfile manager (not started)
-- Artifact downloaders (not started)
+### ⚠️ Best Effort / Future
+- PyPI and Docker are visible in output but never gate (Pilot)
+- Hosted backend / reputation / dashboards are future roadmap items
 
 ## Integration Points
 
@@ -210,14 +212,17 @@ mcp-shield [command]
 - Implementation follows `docs/implementation-guide.md`
 
 **External APIs**:
-- MCP Registry: `https://registry.modelcontextprotocol.io/v0.1/servers/{name}`
-- npm registry: (coming in Phase 3)
-- PyPI registry: (coming in Phase 3)
+- MCP Registry: `https://registry.modelcontextprotocol.io/v0/...`
+- npm registry: `https://registry.npmjs.org`
+- OSV API: `https://api.osv.dev`
+- PyPI JSON API: best effort / future
 
 ## Next Phase Preview
 
-Phase 3 will add:
-1. Artifact downloaders → `core/src/downloaders/`
+Next phases likely include:
+1. CI templates and a first-class GitHub Action
+2. Policy packs and org-level configuration
+3. Optional hosted reporting/alerts (monetized)
 2. Digest verification → `core/src/verification/`
 3. Scanner implementation → `scanner/src/analyzers/`
 4. Lockfile manager → `core/src/lockfile/`

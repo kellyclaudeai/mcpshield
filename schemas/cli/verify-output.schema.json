@@ -1,0 +1,89 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcpshield.dev/schemas/cli/verify-output.schema.json",
+  "title": "MCPShield Verify Output",
+  "description": "Machine-readable output from the mcp-shield verify command",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tool", "toolVersion", "command", "generatedAt", "summary", "results", "errors"],
+  "properties": {
+    "tool": { "type": "string", "const": "mcpshield" },
+    "toolVersion": {
+      "type": "string",
+      "description": "MCPShield tool version",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9.]+)?$"
+    },
+    "command": { "type": "string", "const": "verify" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["servers", "artifacts", "ok", "drift", "errors", "skipped"],
+      "properties": {
+        "servers": { "type": "integer", "minimum": 0 },
+        "artifacts": { "type": "integer", "minimum": 0 },
+        "ok": { "type": "integer", "minimum": 0 },
+        "drift": { "type": "integer", "minimum": 0 },
+        "errors": { "type": "integer", "minimum": 0 },
+        "skipped": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "results": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/VerifyServerResult" }
+    },
+    "errors": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/ErrorItem" }
+    }
+  },
+  "definitions": {
+    "Digest": {
+      "type": "string",
+      "pattern": "^(sha256|sha512)-[A-Za-z0-9+/=]+$"
+    },
+    "ErrorItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message"],
+      "properties": {
+        "code": { "type": "string" },
+        "message": { "type": "string" },
+        "details": { "type": ["object", "null"] }
+      }
+    },
+    "VerifyArtifactResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "url", "expectedDigest", "actualDigest", "status", "source", "error"],
+      "properties": {
+        "type": { "type": "string" },
+        "url": { "type": "string" },
+        "expectedDigest": { "$ref": "#/definitions/Digest" },
+        "actualDigest": { "type": ["string", "null"], "pattern": "^(sha256|sha512)-[A-Za-z0-9+/=]+$" },
+        "status": { "type": "string", "enum": ["ok", "drift", "error", "skipped"] },
+        "source": { "type": "string", "enum": ["cache", "download", "skipped"] },
+        "error": { "anyOf": [{ "type": "null" }, { "$ref": "#/definitions/ErrorItem" }] }
+      }
+    },
+    "VerifyServerResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["namespace", "version", "verified", "artifacts", "errors"],
+      "properties": {
+        "namespace": { "type": "string" },
+        "version": { "type": "string" },
+        "verified": { "type": "boolean" },
+        "artifacts": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/VerifyArtifactResult" }
+        },
+        "errors": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/ErrorItem" }
+        }
+      }
+    }
+  }
+}
+

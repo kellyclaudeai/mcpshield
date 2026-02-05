@@ -10,7 +10,8 @@ import * as os from 'os';
 import * as dns from 'dns/promises';
 import * as https from 'https';
 import { fileURLToPath } from 'url';
-import { LockfileManager, CacheManager } from '@mcpshield/core';
+import { CacheManager } from '@mcpshield/core';
+import { EXIT_GENERAL_FAILURE, EXIT_SUCCESS, debugLog, getGlobalOptions, logError, logInfo, writeJson } from '../output.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -49,7 +50,7 @@ interface DoctorOptions {
 }
 
 const DEFAULT_REGISTRY_URL = 'https://registry.modelcontextprotocol.io';
-const POLICY_FILE = 'mcpshield-policy.yaml';
+const POLICY_FILE = 'policy.yaml';
 
 /**
  * Redact sensitive information from paths and URLs
@@ -109,8 +110,7 @@ async function checkHTTPS(url: string): Promise<{ reachable: boolean; error?: st
 async function runDiagnostics(options: DoctorOptions): Promise<DoctorOutput> {
   const cwd = process.cwd();
   const cache = new CacheManager();
-  const cacheDir = cache['cacheDir']; // Access private property
-  const lockfileManager = new LockfileManager();
+  const cacheDir = cache.getCacheDir();
   
   // Check file existence
   const lockfilePath = path.join(cwd, 'mcp.lock.json');
@@ -138,7 +138,9 @@ async function runDiagnostics(options: DoctorOptions): Promise<DoctorOutput> {
   let httpsReachable = false;
   let registryError: string | undefined;
   
-  if (!options.offline) {
+  if (options.offline) {
+    registryError = 'Skipped due to --offline';
+  } else {
     const registryUrl = new URL(DEFAULT_REGISTRY_URL);
     dnsResolved = await checkDNS(registryUrl.hostname);
     
@@ -225,21 +227,24 @@ function formatHumanOutput(data: DoctorOutput): string {
   
   lines.push('Registry:');
   lines.push(`  URL: ${data.registry.url}`);
-  lines.push(`  ${data.registry.dnsResolved ? '✓' : '✗'} DNS Resolution ${data.registry.dnsResolved ? 'OK' : 'FAILED'}`);
-  lines.push(`  ${data.registry.httpsReachable ? '✓' : '✗'} HTTPS Connectivity ${data.registry.httpsReachable ? 'OK' : 'FAILED'}`);
-  if (data.registry.error) {
-    lines.push(`  Error: ${data.registry.error}`);
+  if (data.registry.error === 'Skipped due to --offline') {
+    lines.push('  ⏭ Registry connectivity checks skipped (--offline)');
+  } else {
+    lines.push(`  ${data.registry.dnsResolved ? '✓' : '✗'} DNS Resolution ${data.registry.dnsResolved ? 'OK' : 'FAILED'}`);
+    lines.push(`  ${data.registry.httpsReachable ? '✓' : '✗'} HTTPS Connectivity ${data.registry.httpsReachable ? 'OK' : 'FAILED'}`);
+    if (data.registry.error) {
+      lines.push(`  Error: ${data.registry.error}`);
+    }
   }
   lines.push('');
   
   lines.push(`Timestamp: ${data.timestamp}`);
   
   // Summary
-  const allChecks = [
-    data.files.lockfileExists,
-    data.registry.dnsResolved,
-    data.registry.httpsReachable,
-  ];
+  const allChecks = [data.files.lockfileExists];
+  if (data.registry.error !== 'Skipped due to --offline') {
+    allChecks.push(data.registry.dnsResolved, data.registry.httpsReachable);
+  }
   const passedChecks = allChecks.filter(Boolean).length;
   const totalChecks = allChecks.length;
   
@@ -258,23 +263,32 @@ function formatHumanOutput(data: DoctorOutput): string {
  * Doctor command implementation
  */
 export async function doctorCommand(options: DoctorOptions = {}): Promise<number> {
-  try {
-    const diagnostics = await runDiagnostics(options);
-    
-    if (options.json) {
-      console.log(JSON.stringify(diagnostics, null, 2));
-    } else {
-      console.log(formatHumanOutput(diagnostics));
-    }
-    
-    // Exit with error code if critical checks fail
-    if (!diagnostics.registry.dnsResolved || !diagnostics.registry.httpsReachable) {
-      return 1;
-    }
-    
-    return 0;
-  } catch (error: any) {
-    console.error(`❌ Doctor command failed: ${error.message}`);
-    return 1;
+  const startTime = Date.now();
+  const opts = getGlobalOptions();
+  const diagnostics = await runDiagnostics(options);
+
+  if (opts.json) {
+    writeJson(diagnostics);
+  } else if (!opts.quiet) {
+    logInfo(formatHumanOutput(diagnostics));
   }
+
+  const registryChecksFailed =
+    diagnostics.registry.error !== 'Skipped due to --offline' &&
+    (!diagnostics.registry.dnsResolved || !diagnostics.registry.httpsReachable);
+
+  // Exit with error code if critical checks fail
+  if (registryChecksFailed) {
+    if (!opts.json && opts.quiet) {
+      logError('Doctor checks failed.');
+      if (diagnostics.registry.error) {
+        logError(`Registry: ${diagnostics.registry.error}`);
+      }
+    }
+    debugLog(`doctor completed in ${Date.now() - startTime}ms`);
+    return EXIT_GENERAL_FAILURE;
+  }
+
+  debugLog(`doctor completed in ${Date.now() - startTime}ms`);
+  return EXIT_SUCCESS;
 }

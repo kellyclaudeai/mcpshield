@@ -17,6 +17,12 @@ export {
   ResolverResult,
 } from './artifact-resolver.js';
 export {
+  OSVClient,
+  OSVAnalysisResult,
+  OSVNpmDependencyAnalysis,
+  OSVUnresolvedDependency,
+} from './osv.js';
+export {
   Policy,
   GlobalPolicy,
   ServerPolicy,

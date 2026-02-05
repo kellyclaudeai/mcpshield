@@ -4,12 +4,17 @@
  */
 
 import chalk from 'chalk';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const toolVersion: string = require('../package.json').version;
 
 export interface GlobalOptions {
   json?: boolean;
   ci?: boolean;
   quiet?: boolean;
   color?: boolean;
+  offline?: boolean;
   debug?: boolean;
 }
 
@@ -53,7 +58,7 @@ export function logInfo(message: string): void {
  * Log warning message (respects --json, but not --quiet)
  */
 export function logWarn(message: string): void {
-  if (globalOptions.json) return;
+  if (globalOptions.json || globalOptions.quiet) return;
   console.warn(message);
 }
 
@@ -134,19 +139,37 @@ export class UnexpectedError extends Error {
 /**
  * Handle command errors and exit with correct code
  */
-export function handleCommandError(error: any): never {
+export function handleCommandError(error: any, command?: string): never {
+  if (globalOptions.json) {
+    const errorType = error instanceof UserError ? 'user' : 'unexpected';
+    const message =
+      error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unknown error';
+
+    writeJson({
+      tool: 'mcpshield',
+      toolVersion,
+      command: command ?? null,
+      generatedAt: new Date().toISOString(),
+      ok: false,
+      error: {
+        type: errorType,
+        message,
+      },
+    });
+  }
+
   if (error instanceof UserError) {
-    logError(`\nError: ${error.message}`);
+    if (!globalOptions.json) logError(`\nError: ${error.message}`);
     process.exit(EXIT_USER_ERROR);
   } else if (error instanceof UnexpectedError) {
-    logError(`\nUnexpected error: ${error.message}`);
+    if (!globalOptions.json) logError(`\nUnexpected error: ${error.message}`);
     if (error.cause && !globalOptions.json) {
       logError(`Cause: ${error.cause.message}`);
     }
     process.exit(EXIT_UNEXPECTED);
   } else {
     // Unknown error type - treat as unexpected
-    logError(`\nError: ${error.message || error}`);
+    if (!globalOptions.json) logError(`\nError: ${error.message || error}`);
     process.exit(EXIT_UNEXPECTED);
   }
 }

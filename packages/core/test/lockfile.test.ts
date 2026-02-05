@@ -48,7 +48,8 @@ describe('LockfileManager', () => {
             verified: true,
             verificationMethod: 'github',
             verifiedOwner: 'test',
-            fetchedAt: new Date().toISOString()
+            fetchedAt: new Date().toISOString(),
+            artifacts: []
           }
         }
       };
@@ -73,7 +74,8 @@ describe('LockfileManager', () => {
             namespace: 'io.github.test/server1',
             version: '1.0.0',
             verified: true,
-            fetchedAt: new Date().toISOString()
+            fetchedAt: new Date().toISOString(),
+            artifacts: []
           }
         }
       };
@@ -140,7 +142,8 @@ describe('LockfileManager', () => {
             verified: true,
             verificationMethod: 'github',
             verifiedOwner: 'test',
-            fetchedAt: new Date().toISOString()
+            fetchedAt: new Date().toISOString(),
+            artifacts: []
           }
         }
       };
@@ -174,7 +177,8 @@ describe('LockfileManager', () => {
             // Missing version
             version: undefined as any,
             verified: true,
-            fetchedAt: new Date().toISOString()
+            fetchedAt: new Date().toISOString(),
+            artifacts: []
           }
         }
       };
@@ -199,7 +203,7 @@ describe('LockfileManager', () => {
               {
                 type: 'npm',
                 url: 'https://registry.npmjs.org/@test/package/-/package-1.0.0.tgz',
-                digest: 'sha256:' + 'a'.repeat(64),
+                digest: `sha256-${Buffer.alloc(32, 1).toString('base64')}`,
                 size: 12345
               }
             ]
@@ -220,7 +224,8 @@ describe('LockfileManager', () => {
         verified: false,
         verificationMethod: 'github',
         verifiedOwner: null,
-        fetchedAt: new Date().toISOString()
+        fetchedAt: new Date().toISOString(),
+        artifacts: []
       };
 
       await lockfileManager.addServer(entry);
@@ -239,7 +244,8 @@ describe('LockfileManager', () => {
         namespace: 'io.github.test/server',
         version: '1.0.0',
         verified: false,
-        fetchedAt: new Date().toISOString()
+        fetchedAt: new Date().toISOString(),
+        artifacts: []
       };
       await lockfileManager.addServer(entry1);
 
@@ -250,7 +256,8 @@ describe('LockfileManager', () => {
         verified: true,
         verificationMethod: 'github',
         verifiedOwner: 'test',
-        fetchedAt: new Date().toISOString()
+        fetchedAt: new Date().toISOString(),
+        artifacts: []
       };
       await lockfileManager.addServer(entry2);
 
@@ -270,7 +277,8 @@ describe('LockfileManager', () => {
         namespace: 'io.github.test/server',
         version: '1.0.0',
         verified: false,
-        fetchedAt: new Date().toISOString()
+        fetchedAt: new Date().toISOString(),
+        artifacts: []
       };
       await lockfileManager.addServer(entry);
 
@@ -288,7 +296,8 @@ describe('LockfileManager', () => {
         namespace: 'io.github.test/server',
         version: '1.0.0',
         verified: true,
-        fetchedAt: new Date().toISOString()
+        fetchedAt: new Date().toISOString(),
+        artifacts: []
       };
       await lockfileManager.addServer(entry);
 
@@ -311,13 +320,15 @@ describe('LockfileManager', () => {
             namespace: 'io.github.test/zebra',
             version: '1.0.0',
             verified: false,
-            fetchedAt: new Date().toISOString()
+            fetchedAt: new Date().toISOString(),
+            artifacts: []
           },
           'io.github.test/alpha': {
             namespace: 'io.github.test/alpha',
             version: '1.0.0',
             verified: false,
-            fetchedAt: new Date().toISOString()
+            fetchedAt: new Date().toISOString(),
+            artifacts: []
           }
         }
       };
@@ -350,7 +361,8 @@ describe('LockfileManager', () => {
             namespace: 'io.github.test/new',
             version: '1.0.0',
             verified: false,
-            fetchedAt: new Date().toISOString()
+            fetchedAt: new Date().toISOString(),
+            artifacts: []
           }
         }
       };
@@ -370,7 +382,8 @@ describe('LockfileManager', () => {
             namespace: 'io.github.test/old',
             version: '1.0.0',
             verified: false,
-            fetchedAt: new Date().toISOString()
+            fetchedAt: new Date().toISOString(),
+            artifacts: []
           }
         }
       };
@@ -396,7 +409,8 @@ describe('LockfileManager', () => {
             namespace: 'io.github.test/server',
             version: '1.0.0',
             verified: false,
-            fetchedAt: new Date().toISOString()
+            fetchedAt: new Date().toISOString(),
+            artifacts: []
           }
         }
       };
@@ -409,7 +423,8 @@ describe('LockfileManager', () => {
             namespace: 'io.github.test/server',
             version: '2.0.0',
             verified: false,
-            fetchedAt: new Date().toISOString()
+            fetchedAt: new Date().toISOString(),
+            artifacts: []
           }
         }
       };

@@ -7,6 +7,11 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import chalk from 'chalk';
+import { createRequire } from 'module';
+import { debugLog, getGlobalOptions, logInfo, logWarn, writeJson } from '../output.js';
+
+const require = createRequire(import.meta.url);
+const toolVersion: string = require('../../package.json').version;
 
 const LOCKFILE_TEMPLATE = {
   version: '1.0.0',
@@ -17,40 +22,41 @@ const LOCKFILE_TEMPLATE = {
 const POLICY_TEMPLATE = `# MCPShield Policy Configuration
 #
 # This file defines security policies for MCP servers in your project.
-# See: https://github.com/yourusername/mcpshield/docs/policy-spec.md
+# See: docs/policy-yaml-spec.md
 
 version: "1.0"
 
 # Global policy settings
 global:
-  # Require all servers to be verified
-  requireVerified: false
+  # Require publisher identity verification
+  requireVerification: false
   
-  # Maximum allowed risk score (0-100)
+  # Block servers without verified publishers
+  denyUnverified: false
+  
+  # Maximum acceptable risk score (0-100)
   maxRiskScore: 50
   
-  # Block servers with these verdicts
-  blockVerdicts:
-    - malicious
-    - suspicious
+  # Block servers with findings at these severities
+  blockSeverities:
+    - critical
 
 # Server-specific policies
-servers: {}
+servers: []
 
 # Example server policy (uncomment to use):
 # servers:
-#   io.github.user/server-name:
+#   - serverName: "io.github.user/server-name"
 #     enabled: true
 #     maxRiskScore: 30
-#     allowedTools:
-#       - read_file
-#       - write_file
-#     deniedTools:
-#       - execute_command
 `;
 
 export async function initCommand(): Promise<void> {
-  console.log(chalk.blue('\n🔒 Initializing MCPShield\n'));
+  const startTime = Date.now();
+  const opts = getGlobalOptions();
+  if (!opts.json) {
+    logInfo(chalk.blue('\n🔒 Initializing MCPShield\n'));
+  }
   
   const cwd = process.cwd();
   const lockfilePath = path.join(cwd, 'mcp.lock.json');
@@ -76,26 +82,42 @@ export async function initCommand(): Promise<void> {
   
   // Create mcp.lock.json
   if (lockfileExists) {
-    console.log(chalk.yellow(`⚠ mcp.lock.json already exists, skipping`));
+    logWarn(chalk.yellow(`⚠ mcp.lock.json already exists, skipping`));
   } else {
     await fs.writeFile(
       lockfilePath,
       JSON.stringify(LOCKFILE_TEMPLATE, null, 2) + '\n',
       'utf-8'
     );
-    console.log(chalk.green(`✓ Created mcp.lock.json`));
+    logInfo(chalk.green(`✓ Created mcp.lock.json`));
   }
   
   // Create policy.yaml
   if (policyExists) {
-    console.log(chalk.yellow(`⚠ policy.yaml already exists, skipping`));
+    logWarn(chalk.yellow(`⚠ policy.yaml already exists, skipping`));
   } else {
     await fs.writeFile(policyPath, POLICY_TEMPLATE, 'utf-8');
-    console.log(chalk.green(`✓ Created policy.yaml`));
+    logInfo(chalk.green(`✓ Created policy.yaml`));
   }
   
-  console.log(chalk.dim('\nNext steps:'));
-  console.log(chalk.dim('  1. Run `mcp-shield add <server-name>` to add servers'));
-  console.log(chalk.dim('  2. Edit policy.yaml to configure security policies'));
-  console.log(chalk.dim('  3. Run `mcp-shield verify` to verify all servers\n'));
+  if (opts.json) {
+    writeJson({
+      tool: 'mcpshield',
+      toolVersion,
+      command: 'init',
+      generatedAt: new Date().toISOString(),
+      result: {
+        lockfile: { path: lockfilePath, created: !lockfileExists },
+        policy: { path: policyPath, created: !policyExists },
+      },
+      errors: [],
+    });
+  } else {
+    logInfo(chalk.dim('\nNext steps:'));
+    logInfo(chalk.dim('  1. Run `mcp-shield add <server-name>` to add servers'));
+    logInfo(chalk.dim('  2. Edit policy.yaml to configure security policies'));
+    logInfo(chalk.dim('  3. Run `mcp-shield verify` to verify all servers\n'));
+  }
+
+  debugLog(`init completed in ${Date.now() - startTime}ms`);
 }

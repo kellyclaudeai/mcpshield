@@ -42,14 +42,25 @@ const DEFAULT_CONNECT_TIMEOUT = 15000; // 15 seconds
 const DEFAULT_REQUEST_TIMEOUT = 60000; // 60 seconds
 const DEFAULT_MAX_REDIRECTS = 3;
 
+function parseEnvNumber(name: string): number | null {
+  const raw = process.env[name];
+  if (!raw) return null;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < 0) return null;
+  return value;
+}
+
 export abstract class ArtifactResolver {
   protected options: Required<ResolverOptions>;
 
   constructor(options: ResolverOptions = {}) {
+    const envConnectTimeout = parseEnvNumber('MCPSHIELD_CONNECT_TIMEOUT_MS');
+    const envRequestTimeout = parseEnvNumber('MCPSHIELD_REQUEST_TIMEOUT_MS');
+
     this.options = {
       maxArtifactSize: options.maxArtifactSize ?? DEFAULT_MAX_ARTIFACT_SIZE,
-      connectTimeout: options.connectTimeout ?? DEFAULT_CONNECT_TIMEOUT,
-      requestTimeout: options.requestTimeout ?? DEFAULT_REQUEST_TIMEOUT,
+      connectTimeout: options.connectTimeout ?? envConnectTimeout ?? DEFAULT_CONNECT_TIMEOUT,
+      requestTimeout: options.requestTimeout ?? envRequestTimeout ?? DEFAULT_REQUEST_TIMEOUT,
       maxRedirects: options.maxRedirects ?? DEFAULT_MAX_REDIRECTS,
       offline: options.offline ?? false,
     };
@@ -108,7 +119,17 @@ export class NpmResolver extends ArtifactResolver {
       });
 
       const metadata = response.body as any;
-      const versionData = metadata.versions?.[version];
+      let resolvedVersion = version;
+      let versionData = metadata.versions?.[resolvedVersion];
+
+      // Support dist-tags like "latest" and "next"
+      if (!versionData && metadata?.['dist-tags'] && typeof metadata['dist-tags'] === 'object') {
+        const taggedVersion = metadata['dist-tags']?.[version];
+        if (typeof taggedVersion === 'string') {
+          resolvedVersion = taggedVersion;
+          versionData = metadata.versions?.[resolvedVersion];
+        }
+      }
       
       if (!versionData) {
         throw new Error(`Version ${version} not found for ${name}`);
@@ -392,7 +413,7 @@ export class DockerResolver extends ArtifactResolver {
   /**
    * Download Docker image (placeholder)
    */
-  async download(artifact: ArtifactInfo, outputPath: string): Promise<string> {
+  async download(_artifact: ArtifactInfo, _outputPath: string): Promise<string> {
     this.assertOnline();
 
     // Real implementation would:
@@ -505,7 +526,23 @@ export class CacheManager {
    * Get cache path for a digest
    */
   getCachePath(digest: string): string {
-    // Use first 2 chars of digest for sharding
+    return this.getSafeCachePath(digest);
+  }
+
+  private getSafeCachePath(digest: string): string {
+    const match = digest.match(/^(sha256|sha512)-(.+)$/);
+    const algorithm = match?.[1] ?? 'sha256';
+    const hashPart = match?.[2] ?? digest;
+
+    // Convert to a filesystem-safe, deterministic key (base64url, no padding).
+    const safeHash = hashPart.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+    const shard = safeHash.substring(0, 2) || '00';
+    const fileName = `${algorithm}-${safeHash}`;
+
+    return path.join(this.cacheDir, shard, fileName);
+  }
+
+  private getLegacyCachePath(digest: string): string {
     const hash = digest.replace(/^(sha256|sha512)-/, '');
     const shard = hash.substring(0, 2);
     return path.join(this.cacheDir, shard, digest);
@@ -515,12 +552,16 @@ export class CacheManager {
    * Check if artifact is cached
    */
   async has(digest: string): Promise<boolean> {
-    const cachePath = this.getCachePath(digest);
     try {
-      await fs.promises.access(cachePath);
+      await fs.promises.access(this.getSafeCachePath(digest));
       return true;
     } catch {
-      return false;
+      try {
+        await fs.promises.access(this.getLegacyCachePath(digest));
+        return true;
+      } catch {
+        return false;
+      }
     }
   }
   
@@ -528,16 +569,28 @@ export class CacheManager {
    * Get cached artifact path
    */
   async get(digest: string): Promise<string | null> {
-    const cachePath = this.getCachePath(digest);
-    const exists = await this.has(digest);
-    return exists ? cachePath : null;
+    const safePath = this.getSafeCachePath(digest);
+    try {
+      await fs.promises.access(safePath);
+      return safePath;
+    } catch {
+      // fallthrough
+    }
+
+    const legacyPath = this.getLegacyCachePath(digest);
+    try {
+      await fs.promises.access(legacyPath);
+      return legacyPath;
+    } catch {
+      return null;
+    }
   }
   
   /**
    * Store artifact in cache
    */
   async put(digest: string, sourcePath: string): Promise<string> {
-    const cachePath = this.getCachePath(digest);
+    const cachePath = this.getSafeCachePath(digest);
     await fs.promises.mkdir(path.dirname(cachePath), { recursive: true });
     await fs.promises.copyFile(sourcePath, cachePath);
     return cachePath;

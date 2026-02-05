@@ -27,61 +27,58 @@ This roadmap outlines the next 90 days of development, focusing on features that
 - [x] **PR-001: Repository/legal baseline** ✅
   - MIT license, SECURITY.md, SUPPORT.md, CONTRIBUTING.md
   
-- [ ] **PR-002: Lockfile schema + atomic writes**
+- [x] **PR-002: Lockfile schema + atomic writes**
   - JSON Schema validation for `mcp.lock.json`
   - Atomic file writes (temp + rename pattern)
-  - Migration path for v1 → v2 schema
+  - `mcp-shield lock validate` command
   
-- [ ] **PR-003: Policy schema + enforcement**
+- [x] **PR-003: Policy schema + enforcement**
   - YAML schema for `policy.yaml`
-  - Policy validation and error messages
+  - Policy validation and deterministic error reporting
   - Default policy template
   
-- [ ] **PR-004: CLI contract plumbing**
-  - Structured output formats (JSON, YAML)
-  - Exit codes contract (0=success, 1=policy violation, 2=error)
-  - Machine-readable error messages
+- [x] **PR-004: CLI contract plumbing**
+  - Deterministic JSON output (`--json`) and CI mode (`--ci`)
+  - Exit codes contract (0=success, 1=policy/drift, 2=user error, 3=unexpected)
+  - Quiet/no-color/debug flags and consistent error handling
   
-- [ ] **PR-005: NPM resolver hardening**
-  - Retry logic with exponential backoff
-  - Better error messages for registry failures
-  - Offline mode (use cached artifacts only)
+- [x] **PR-005: NPM resolver hardening**
+  - Hardened network behavior (timeouts, redirects, size limits)
+  - Offline mode (refuse network, cache only)
+  - Unit tests with HTTP mocks (no live network)
   
-- [ ] **PR-006: Cache improvements**
+- [x] **PR-006: Cache improvements**
   - XDG cache directory support
-  - Cache size limits and LRU eviction
-  - `mcp-shield cache clean` command
+  - `mcp-shield cache gc` and `mcp-shield cache purge` commands
 
 ### Security Features
 
-- [ ] **PR-007: Scanner safety + OSV integration** 🔴 CRITICAL
-  - Sandboxed code analysis (no direct `eval` of untrusted code)
-  - OSV database integration for known vulnerabilities
-  - CVE lookup for npm/PyPI packages
+- [x] **PR-007: Scanner safety + OSV integration** 🔴 CRITICAL
+  - Safe extraction and traversal/link protections
+  - OSV integration for dependency vulnerabilities (Pilot: direct deps)
+  - Patched `tar` dependency and regression tests
   
-- [ ] **PR-008: SARIF output**
+- [x] **PR-008: SARIF output**
   - GitHub Code Scanning format
-  - Severity levels (error, warning, note)
-  - Source locations for findings
+  - Upload workflow for GitHub Code Scanning
 
 ### Infrastructure
 
-- [ ] **PR-009: Release automation**
+- [x] **PR-009: Release automation**
   - GitHub Actions for npm publish
-  - Automated changelog generation
-  - Version bumping workflow
+  - Automated changelog notes and GitHub Release creation
+  - Publish via trusted publishing (OIDC) or `NPM_TOKEN` secret
   
-- [ ] **PR-011: CI hardening**
-  - Pre-commit hooks (lint, format, type-check)
+- [x] **PR-011: CI hardening**
+  - Lint, build, and unit test matrix (Node 22/24; Linux/macOS)
   - GitHub Actions for PR validation
-  - Test coverage reports
+  - Best-effort E2E job (network-labeled)
   
-- [ ] **PR-012: Support tooling**
+- [x] **PR-012: Support tooling**
   - `mcp-shield doctor` command for debugging
-  - `mcp-shield report` to generate support bundles
   - Better logging and diagnostics
 
-**Milestone:** Community Edition v1.0.0 release 🎉
+**Milestone:** Pilot-ready OSS release (v0.1.x)
 
 ---
 

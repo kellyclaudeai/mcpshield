@@ -5,27 +5,33 @@
  */
 
 import { Command } from 'commander';
+import { createRequire } from 'module';
 import { RegistryClient } from '@mcpshield/core';
 import { addCommand, initCommand, verifyCommand, scanCommand, cacheGcCommand, cachePurgeCommand, doctorCommand, lockValidateCommand } from './commands/index.js';
 import { setGlobalOptions, handleCommandError, debugLog } from './output.js';
+
+const require = createRequire(import.meta.url);
+const toolVersion: string = require('../package.json').version;
 
 const program = new Command();
 
 program
   .name('mcp-shield')
   .description('Supply chain security tool for MCP servers')
-  .version('0.1.0')
+  .version(toolVersion)
   .option('--json', 'Output results as JSON (disables ANSI colors and progress)')
   .option('--ci', 'CI mode: no prompts, fail fast (implies --no-color)')
   .option('--quiet', 'Suppress non-essential output')
   .option('--no-color', 'Disable ANSI color output')
+  .option('--offline', 'Offline mode: refuse network and use cache only')
   .option('--debug', 'Enable debug output (timing and decisions to stderr)')
   .hook('preAction', (thisCommand) => {
     const opts = thisCommand.optsWithGlobals();
     
-    // CI mode implies no-color
+    // CI mode implies --quiet and --no-color
     if (opts.ci) {
       opts.color = false;
+      opts.quiet = true;
     }
     
     setGlobalOptions({
@@ -33,6 +39,7 @@ program
       ci: opts.ci,
       quiet: opts.quiet,
       color: opts.color !== false,
+      offline: opts.offline || false,
       debug: opts.debug || false,
     });
     
@@ -53,7 +60,7 @@ program
       await initCommand();
       debugLog(`init completed in ${Date.now() - startTime}ms`);
     } catch (error: any) {
-      handleCommandError(error);
+      handleCommandError(error, 'init');
     }
   });
 
@@ -63,14 +70,16 @@ program
   .description('Add an MCP server to your project')
   .argument('<server-name>', 'Server name from registry (e.g., io.github.user/server-name)')
   .option('-y, --yes', 'Skip confirmation prompts')
-  .action(async (serverName: string, options: { yes?: boolean }) => {
+  .action(async (serverName: string, options: { yes?: boolean }, command: Command) => {
     const startTime = Date.now();
+    const globalOpts = command.optsWithGlobals();
     debugLog(`Adding server: ${serverName}`);
     try {
-      await addCommand(serverName, options);
+      const exitCode = await addCommand(serverName, { ...options, ci: globalOpts.ci });
       debugLog(`add completed in ${Date.now() - startTime}ms`);
+      process.exit(exitCode);
     } catch (error: any) {
-      handleCommandError(error);
+      handleCommandError(error, 'add');
     }
   });
 
@@ -78,14 +87,15 @@ program
 program
   .command('verify')
   .description('Verify all servers in lockfile')
-  .action(async () => {
+  .action(async (_options, command: Command) => {
     const startTime = Date.now();
     try {
-      const exitCode = await verifyCommand();
+      const globalOpts = command.optsWithGlobals();
+      const exitCode = await verifyCommand({ offline: globalOpts.offline });
       debugLog(`verify completed in ${Date.now() - startTime}ms with exit code ${exitCode}`);
       process.exit(exitCode);
     } catch (error: any) {
-      handleCommandError(error);
+      handleCommandError(error, 'verify');
     }
   });
 
@@ -99,10 +109,15 @@ program
     const startTime = Date.now();
     try {
       const globalOpts = command.optsWithGlobals();
-      await scanCommand({ ...options, ci: globalOpts.ci });
-      debugLog(`scan completed in ${Date.now() - startTime}ms`);
+      const exitCode = await scanCommand({
+        ...options,
+        ci: globalOpts.ci,
+        offline: globalOpts.offline,
+      });
+      debugLog(`scan completed in ${Date.now() - startTime}ms with exit code ${exitCode}`);
+      process.exit(exitCode);
     } catch (error: any) {
-      handleCommandError(error);
+      handleCommandError(error, 'scan');
     }
   });
 
@@ -115,14 +130,13 @@ const lock = program
 lock
   .command('validate')
   .description('Validate lockfile structure and integrity')
-  .option('--json', 'Output as JSON')
-  .option('--ci', 'CI mode (no colors, fail fast)')
-  .action(async (options: { json?: boolean; ci?: boolean }) => {
+  .action(async (_options, command: Command) => {
     try {
-      const exitCode = await lockValidateCommand(options);
+      const globalOpts = command.optsWithGlobals();
+      const exitCode = await lockValidateCommand({ json: globalOpts.json, ci: globalOpts.ci });
       process.exit(exitCode);
     } catch (error: any) {
-      handleCommandError(error);
+      handleCommandError(error, 'lock validate');
     }
   });
 
@@ -137,11 +151,12 @@ program
       const exitCode = await doctorCommand({
         json: globalOpts.json,
         ci: globalOpts.ci,
+        offline: globalOpts.offline,
       });
       debugLog(`doctor completed in ${Date.now() - startTime}ms with exit code ${exitCode}`);
       process.exit(exitCode);
     } catch (error: any) {
-      handleCommandError(error);
+      handleCommandError(error, 'doctor');
     }
   });
 
@@ -160,7 +175,7 @@ cache
       await cacheGcCommand(options);
       debugLog(`cache gc completed in ${Date.now() - startTime}ms`);
     } catch (error: any) {
-      handleCommandError(error);
+      handleCommandError(error, 'cache gc');
     }
   });
 
@@ -173,7 +188,7 @@ cache
       await cachePurgeCommand();
       debugLog(`cache purge completed in ${Date.now() - startTime}ms`);
     } catch (error: any) {
-      handleCommandError(error);
+      handleCommandError(error, 'cache purge');
     }
   });
 
@@ -208,7 +223,7 @@ program
       
       debugLog(`test-registry completed in ${Date.now() - startTime}ms`);
     } catch (error: any) {
-      handleCommandError(error);
+      handleCommandError(error, 'test-registry');
     }
   });
 

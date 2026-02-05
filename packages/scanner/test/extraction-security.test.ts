@@ -29,14 +29,10 @@ describe('Extraction Security', () => {
   });
 
   it('should reject tarball with path traversal attempt', async () => {
-    // This test verifies the path traversal protection in secureExtract()
-    // We create a package with files that include .. in the path
+    // This test verifies the path traversal protection in secureExtractTarball()
     const maliciousDir = path.join(tempDir, 'malicious');
-    await fs.mkdir(maliciousDir, { recursive: true });
-    
-    // Create a directory structure that includes .. traversal
-    const nestedDir = path.join(maliciousDir, 'package', 'subdir');
-    await fs.mkdir(nestedDir, { recursive: true });
+    const packageDir = path.join(maliciousDir, 'package');
+    await fs.mkdir(packageDir, { recursive: true });
     
     // Create package.json
     const packageJson = {
@@ -45,64 +41,57 @@ describe('Extraction Security', () => {
       description: 'Malicious package with path traversal',
     };
     await fs.writeFile(
-      path.join(maliciousDir, 'package', 'package.json'),
+      path.join(packageDir, 'package.json'),
       JSON.stringify(packageJson, null, 2)
     );
     
-    // Create a file in subdir
+    // Create a normal file inside the package
     await fs.writeFile(
-      path.join(nestedDir, 'safe.txt'),
+      path.join(packageDir, 'safe.txt'),
       'safe file'
     );
+
+    // Create a file outside of the tar cwd so it will be archived as "../evil.txt"
+    const evilPath = path.join(maliciousDir, '..', 'evil.txt');
+    await fs.writeFile(evilPath, 'This file should never be extracted');
     
-    // Create tarball with preservePaths to force .. inclusion
+    // Create a tarball that includes a ../ path entry
     const tarballPath = path.join(tempDir, 'evil.tgz');
-    try {
-      await tar.create(
-        {
-          gzip: true,
-          file: tarballPath,
-          cwd: nestedDir,
-          preservePaths: true, // This allows .. paths
-        },
-        ['../../package.json', 'safe.txt']
-      );
-      
-      // Read tarball
-      const artifact = await fs.readFile(tarballPath);
-      
-      // Scan the package
-      const pkg: Package = {
-        type: 'npm',
-        identifier: 'evil-package',
-        version: '1.0.0',
-      };
-      
-      const result = await scanner.scanPackage(pkg, artifact);
-      
-      // Check if path traversal was detected
-      const pathTraversalFindings = result.findings.filter(
-        f => f.category === 'extraction' && f.message.includes('EXTRACT_PATH_TRAVERSAL')
-      );
-      
-      // If preservePaths worked and .. was included, we should detect it
-      if (pathTraversalFindings.length > 0) {
-        assert.strictEqual(pathTraversalFindings[0].severity, 'critical');
-        assert.ok(
-          result.verdict === 'malicious' || result.verdict === 'suspicious',
-          `Expected malicious or suspicious, got ${result.verdict}`
-        );
-      } else {
-        // Even if tar normalized paths, verify scan completed successfully
-        // and the security filter is in place
-        assert.ok(result, 'Scan completed');
-        // Verify our security code exists by checking a safe package works
-        assert.ok(result.findings !== undefined);
-      }
-    } catch (err) {
-      // If we can't create the malicious tarball, skip this test
-      console.log('Skipping test - could not create malicious tarball with .. paths');
-    }
+    await tar.create(
+      {
+        gzip: true,
+        file: tarballPath,
+        cwd: maliciousDir,
+        preservePaths: true, // required to allow ../ paths in archive
+      },
+      ['package', '../evil.txt']
+    );
+
+    // Read tarball
+    const artifact = await fs.readFile(tarballPath);
+    
+    // Scan the package
+    const pkg: Package = {
+      type: 'npm',
+      identifier: 'evil-package',
+      version: '1.0.0',
+    };
+    
+    const result = await scanner.scanPackage(pkg, artifact);
+    
+    // Should detect path traversal
+    const pathTraversalFindings = result.findings.filter(
+      f => f.category === 'extraction' && f.message.includes('EXTRACT_PATH_TRAVERSAL')
+    );
+    
+    assert.ok(pathTraversalFindings.length > 0, 'Should detect path traversal attempt');
+    assert.strictEqual(pathTraversalFindings[0].severity, 'critical');
+    
+    // Should be flagged as malicious or suspicious
+    assert.ok(
+      result.verdict === 'malicious' || result.verdict === 'suspicious',
+      `Expected malicious or suspicious, got ${result.verdict}`
+    );
   });
 
   it('should reject tarball with absolute paths', async () => {

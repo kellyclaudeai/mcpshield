@@ -2,18 +2,37 @@
   "name": "@mcpshield/scanner",
   "version": "0.1.0",
   "description": "Security scanning functionality for MCPShield",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kellyclaudeai/mcpshield.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kellyclaudeai/mcpshield/issues"
+  },
+  "homepage": "https://github.com/kellyclaudeai/mcpshield#readme",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -b",
     "test": "node ../../scripts/run-node-tests.mjs --import tsx test/**/*.test.ts",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
     "@mcpshield/core": "^0.1.0",
     "fast-levenshtein": "^3.0.0",
-    "tar": "^7.4.3"
+    "tar": "^7.5.3"
+  },
+  "engines": {
+    "node": ">=22.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

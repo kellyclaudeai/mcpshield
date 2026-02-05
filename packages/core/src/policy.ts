@@ -160,7 +160,7 @@ export async function loadPolicy(policyPath: string = 'policy.yaml'): Promise<Po
 export async function validatePolicy(policy: Policy): Promise<{ valid: boolean; errors?: string[] }> {
   try {
     // Load schema
-    const schemaPath = path.resolve(__dirname, '../../../schemas/policy.yaml.schema.json');
+    const schemaPath = path.resolve(__dirname, '../schemas/policy.yaml.schema.json');
     const schemaContent = await fs.readFile(schemaPath, 'utf-8');
     const schema = JSON.parse(schemaContent);
     

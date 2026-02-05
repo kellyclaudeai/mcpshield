@@ -65,7 +65,7 @@
         },
         "policyFile": {
           "type": "string",
-          "description": "Policy file path (mcpshield-policy.yaml)"
+          "description": "Policy file path (policy.yaml)"
         }
       },
       "additionalProperties": false
@@ -81,7 +81,7 @@
         },
         "policyExists": {
           "type": "boolean",
-          "description": "Whether mcpshield-policy.yaml exists"
+          "description": "Whether policy.yaml exists"
         }
       },
       "additionalProperties": false

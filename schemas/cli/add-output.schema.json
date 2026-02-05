@@ -1,0 +1,70 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcpshield.dev/schemas/cli/add-output.schema.json",
+  "title": "MCPShield Add Output",
+  "description": "Machine-readable output from the mcp-shield add command",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tool", "toolVersion", "command", "generatedAt", "input", "result", "errors"],
+  "properties": {
+    "tool": { "type": "string", "const": "mcpshield" },
+    "toolVersion": {
+      "type": "string",
+      "description": "MCPShield tool version",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9.]+)?$"
+    },
+    "command": { "type": "string", "const": "add" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["namespace", "yes", "ci"],
+      "properties": {
+        "namespace": { "type": "string" },
+        "yes": { "type": "boolean" },
+        "ci": { "type": "boolean" }
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["added", "entryWritten", "policy"],
+      "properties": {
+        "added": { "type": "boolean" },
+        "entryWritten": { "type": "boolean" },
+        "policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["blocked", "reasons"],
+          "properties": {
+            "blocked": { "type": "boolean" },
+            "reasons": { "type": "array", "items": { "$ref": "#/definitions/PolicyReason" } }
+          }
+        }
+      }
+    },
+    "errors": { "type": "array", "items": { "$ref": "#/definitions/ErrorItem" } }
+  },
+  "definitions": {
+    "ErrorItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message"],
+      "properties": {
+        "code": { "type": "string" },
+        "message": { "type": "string" },
+        "details": { "type": ["object", "null"] }
+      }
+    },
+    "PolicyReason": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message"],
+      "properties": {
+        "code": { "type": "string" },
+        "message": { "type": "string" }
+      }
+    }
+  }
+}
+

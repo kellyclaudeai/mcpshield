@@ -2,16 +2,32 @@
   "name": "@mcpshield/cli",
   "version": "0.1.0",
   "description": "Command-line interface for MCPShield",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kellyclaudeai/mcpshield.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kellyclaudeai/mcpshield/issues"
+  },
+  "homepage": "https://github.com/kellyclaudeai/mcpshield#readme",
   "type": "module",
   "bin": {
-    "mcp-shield": "./dist/cli.js"
+    "mcp-shield": "dist/cli.js"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -b",
     "test": "node ../../scripts/run-node-tests.mjs --import tsx test/**/*.test.ts",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
     "@mcpshield/core": "^0.1.0",
@@ -21,9 +37,14 @@
     "ora": "^8.0.1",
     "prompts": "^2.4.2"
   },
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/prompts": "^2.4.9",
+    "ajv": "^8.12.0",
+    "ajv-formats": "^2.1.1",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3"
   }

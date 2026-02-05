@@ -9,7 +9,8 @@
       "verified": false,
       "verificationMethod": "github",
       "verifiedOwner": null,
-      "fetchedAt": "2026-02-05T13:13:38.141Z"
+      "fetchedAt": "2026-02-05T13:13:38.141Z",
+      "artifacts": []
     }
   }
 }

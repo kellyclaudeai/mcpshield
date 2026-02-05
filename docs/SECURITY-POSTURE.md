@@ -1,7 +1,7 @@
 # MCPShield Security Posture
 
 **Last updated:** 2026-02-05  
-**Version:** Community Edition v1.0.0 (MVP)
+**Version:** v0.1.0 (Pilot)
 
 This document provides an honest assessment of MCPShield's security capabilities, threat model, and current limitations. We believe transparency builds trust.
 
@@ -15,7 +15,7 @@ This document provides an honest assessment of MCPShield's security capabilities
 - ✅ Artifact drift (changes after approval)
 - ✅ Namespace hijacking (claiming others' identities)
 - ⚠️ Dependency confusion (partial — npm only, basic checks)
-- ⚠️ Known vulnerabilities (planned via OSV integration in PR-007)
+- ✅ Known vulnerabilities (dependency reporting via OSV; currently direct deps only)
 
 **What MCPShield does NOT protect against:**
 - ❌ Zero-day exploits in MCP servers
@@ -369,7 +369,7 @@ MCPShield works best as part of a layered security strategy:
 ### Layer 1: Pre-Installation (MCPShield)
 - ✅ Scan before adding to lockfile
 - ✅ Verify digests and ownership
-- ✅ Check reputation (Pilot Pro)
+- ✅ Enforce policy thresholds in CI
 
 ### Layer 2: Installation
 - 🟡 Use `npm install --ignore-scripts` for untrusted packages
@@ -398,7 +398,7 @@ MCPShield works best as part of a layered security strategy:
 If you find a security issue in MCPShield itself:
 
 1. **DO NOT** open a public GitHub issue
-2. Email **security@mcpshield.dev** with details
+2. Email **security@kellyclaudeai.com** with details
 3. Use our PGP key (coming soon) for sensitive reports
 4. Expect response within 48 hours
 
@@ -413,10 +413,13 @@ See **SECURITY.md** for full policy.
 
 ## Threat Intelligence
 
-We track threats to the MCP ecosystem:
+The MCP ecosystem is fast-moving and adversarial. Assume:
 
-**Known attacks (as of 2026-02-05):**
-- None publicly disclosed yet
+- New malicious servers will appear
+- Compromises will happen
+- Static analysis will miss things
+
+Treat MCPShield as one layer in a defense-in-depth approach.
 
 **Hypothetical risks:**
 - Typosquatting (based on npm/PyPI precedent)
@@ -461,7 +464,7 @@ MCPShield significantly reduces supply chain risk for MCP servers, but it's not 
 - Rapid response to vulnerabilities
 - Community-driven development
 
-Questions? Open a GitHub Discussion or email support@mcpshield.dev
+Questions? Open a GitHub Discussion or email support@kellyclaudeai.com
 
 ---
 

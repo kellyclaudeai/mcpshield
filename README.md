@@ -13,7 +13,7 @@ The MVP is fully functional with all core features implemented:
 - ✅ **Security Scanning** - Detect typosquats, suspicious code, and vulnerabilities
 - ✅ **CLI Commands** - init, add, verify, scan
 - ✅ **Registry Integration** - Fetch and verify servers from MCP Registry
-- ✅ **Test Coverage** - 13/13 E2E tests passing
+- ✅ **Test Coverage** - E2E + unit tests passing
 
 ## Quick Start
 
@@ -21,7 +21,7 @@ The MVP is fully functional with all core features implemented:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/mcpshield.git
+git clone https://github.com/kellyclaudeai/mcpshield.git
 cd mcpshield
 
 # Install dependencies
@@ -33,6 +33,8 @@ npm run build
 # Link CLI globally (optional)
 npm link packages/cli
 ```
+
+**Requirements:** Node.js >= 22
 
 ### Usage
 
@@ -48,6 +50,11 @@ mcp-shield verify
 
 # 4. Run security scan
 mcp-shield scan
+```
+
+Once published to npm, you’ll be able to run without cloning:
+```bash
+npx @mcpshield/cli --help
 ```
 
 ## Features
@@ -193,7 +200,7 @@ mcpshield/
 
 ### Prerequisites
 
-- Node.js >= 18
+- Node.js >= 22
 - npm >= 9
 
 ### Build

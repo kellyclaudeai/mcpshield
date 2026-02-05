@@ -44,7 +44,7 @@ A: Two options:
 
 ```bash
 # Option 1: Run directly with npx (recommended)
-npx mcp-shield init
+npx @mcpshield/cli init
 
 # Option 2: Clone and build from source
 git clone https://github.com/kellyclaudeai/mcpshield.git
@@ -59,7 +59,7 @@ A: Yes! The lockfile should be committed so your team has a consistent, verified
 
 **Q: What Node.js version do I need?**
 
-A: Node.js >= 18.0.0
+A: Node.js >= 22.0.0
 
 ### Usage
 

@@ -6,6 +6,7 @@ import { describe, it, mock, beforeEach } from 'node:test';
 import assert from 'node:assert';
 import { RegistryClient } from '../src/registry-client.js';
 import { RegistryError, RegistryServerResponse } from '../src/types.js';
+import nock from 'nock';
 
 // Mock server response fixture
 const mockServerResponse: RegistryServerResponse = {
@@ -96,19 +97,23 @@ describe('RegistryClient', () => {
         baseUrl: 'https://test-registry.example.com',
       });
 
-      // We're testing that the URL encoding happens, not making a real request
-      // In a real scenario, we'd mock got() here
       const serverName = '@org/server-name';
       const expectedEncoded = '%40org%2Fserver-name';
 
-      // This will fail with network error, but that's ok - we're just checking
-      // that the encoding logic runs without error
-      try {
-        await client.getServer(serverName);
-      } catch (error) {
-        // Expected to fail due to network, not encoding
-        assert.ok(error instanceof RegistryError);
-      }
+      nock('https://test-registry.example.com')
+        .get(`/v0/servers/${expectedEncoded}/versions/latest`)
+        .reply(404, {});
+
+      await assert.rejects(
+        async () => await client.getServer(serverName),
+        (error: Error) => {
+          assert.ok(error instanceof RegistryError);
+          assert.match(error.message, /not found/i);
+          return true;
+        }
+      );
+
+      assert.ok(nock.isDone());
     });
   });
 

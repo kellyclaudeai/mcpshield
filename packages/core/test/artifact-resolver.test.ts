@@ -115,6 +115,23 @@ describe('NpmResolver', () => {
       assert.strictEqual(result.metadata.version, TEST_PACKAGE_VERSION);
     });
 
+    it('should resolve dist-tags like "latest"', async () => {
+      const resolver = new NpmResolver();
+
+      // Mock the registry request with a dist-tag
+      nock('https://registry.npmjs.org')
+        .get(`/${encodeURIComponent(TEST_PACKAGE_NAME)}`)
+        .reply(200, {
+          ...MOCK_NPM_METADATA,
+          'dist-tags': { latest: TEST_PACKAGE_VERSION },
+        });
+
+      const result = await resolver.resolve(`${TEST_PACKAGE_NAME}@latest`);
+
+      assert.strictEqual(result.artifact.type, 'npm');
+      assert.strictEqual(result.metadata.version, TEST_PACKAGE_VERSION);
+    });
+
     it('should handle scoped packages correctly', async () => {
       const scopedPackage = '@scope/package@2.0.0';
       const resolver = new NpmResolver();
