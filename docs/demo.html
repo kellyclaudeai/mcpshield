@@ -4,57 +4,182 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MCPShield Demo - Interactive Security Scanner</title>
-    <link rel="stylesheet" href="tailwind.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="theme.css">
+    <style>
+        /* Page-specific styles */
+        .page-header {
+            padding: 60px 0 40px;
+        }
+
+        .page-header h1 {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .page-header h1::before {
+            content: '> ';
+            color: var(--terminal-cyan);
+        }
+
+        .subtitle {
+            font-size: 16px;
+            color: var(--text-dim);
+            margin-bottom: 40px;
+            text-transform: none;
+        }
+
+        .server-name {
+            display: block;
+            font-weight: 600;
+            color: var(--terminal-green);
+            margin-bottom: 5px;
+        }
+
+        .server-desc {
+            display: block;
+            font-size: 12px;
+            color: var(--text-dim);
+        }
+
+        .panel h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: var(--terminal-green);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .panel h2::before {
+            content: '> ';
+            color: var(--terminal-cyan);
+        }
+
+        .findings h3 {
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        .findings h3::before {
+            content: '// ';
+            color: var(--terminal-cyan);
+        }
+
+        .verdict {
+            font-family: 'Space Mono', monospace;
+            font-size: 18px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .verdict-clean {
+            color: var(--terminal-green);
+        }
+
+        .verdict-warning {
+            color: var(--terminal-yellow);
+        }
+
+        .verdict-danger {
+            color: var(--terminal-red);
+        }
+
+        .finding-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--text);
+        }
+
+        .finding-desc {
+            color: var(--text-dim);
+            font-size: 12px;
+        }
+
+        .lockfile-view {
+            white-space: pre;
+        }
+    </style>
 </head>
 <body>
     <header>
-        <div class="header-content">
-            <a href="index.html" class="logo">🛡️ MCPShield</a>
-            <a href="index.html" class="btn-back">← Back to Home</a>
+        <div class="container">
+            <div class="header-content">
+                <a href="index.html" class="logo">
+                    <span class="shield-icon">🛡️</span>
+                    MCPShield
+                </a>
+                <nav>
+                    <a href="index.html#features">Features</a>
+                    <a href="demo.html">Demo</a>
+                    <a href="quickstart.html">Quick Start</a>
+                    <a href="docs.html">Docs</a>
+                    <a href="https://www.npmjs.com/package/@kellyclaude/mcpshield">npm</a>
+                    <a href="https://github.com/kellyclaudeai/mcpshield" target="_blank">GitHub</a>
+                </nav>
+            </div>
         </div>
     </header>
 
     <div class="container">
-        <h1>🔍 Interactive Security Demo</h1>
-        <p class="subtitle">Select an MCP server to see real-time security analysis and lockfile generation</p>
+        <div class="page-header">
+            <h1>Interactive Security Demo</h1>
+            <p class="subtitle">Select an MCP server to see real-time security analysis and lockfile generation</p>
+        </div>
 
         <div class="demo-grid">
             <!-- Left Panel: Server Selection -->
             <div class="panel">
-                <h2>📦 Select MCP Server</h2>
+                <h2>Select MCP Server</h2>
                 <div class="server-select" id="serverSelect">
                     <button class="server-button active" data-server="filesystem">
                         <span class="server-name">io.github.modelcontextprotocol/filesystem</span>
-                        <span class="server-desc">✅ Clean - Official MCP filesystem server</span>
+                        <span class="server-desc">Clean - Official MCP filesystem server</span>
                     </button>
                     <button class="server-button" data-server="suspicious">
                         <span class="server-name">io.github.hacker42/free-gpt</span>
-                        <span class="server-desc">⚠️ Warning - Suspicious code patterns detected</span>
+                        <span class="server-desc">Warning - Suspicious code patterns detected</span>
                     </button>
                     <button class="server-button" data-server="typosquat">
                         <span class="server-name">io.github.user/filesysten</span>
-                        <span class="server-desc">🚨 Danger - Typosquat detected</span>
+                        <span class="server-desc">Danger - Typosquat detected</span>
                     </button>
                     <button class="server-button" data-server="malicious">
                         <span class="server-name">io.github.evil/data-exfiltrator</span>
-                        <span class="server-desc">🚨 Malicious - Multiple threats detected</span>
+                        <span class="server-desc">Malicious - Multiple threats detected</span>
                     </button>
                 </div>
 
-                <h2>📋 Lockfile Preview</h2>
+                <h2 style="margin-top: 30px;">Lockfile Preview</h2>
                 <div class="lockfile-view" id="lockfileView"></div>
 
-                <h2 style="margin-top: 30px;">📦 Artifacts</h2>
+                <h2 style="margin-top: 30px;">Artifacts</h2>
                 <div class="artifact-list" id="artifactList"></div>
             </div>
 
             <!-- Right Panel: Security Scan Results -->
             <div class="panel">
-                <h2>🔍 Security Scan Results</h2>
+                <h2>Security Scan Results</h2>
                 <div id="scanResults"></div>
             </div>
         </div>
     </div>
+
+    <footer>
+        <div class="container">
+            <div class="footer-links">
+                <a href="https://github.com/kellyclaudeai/mcpshield">GitHub</a>
+                <a href="quickstart.html">Quick Start</a>
+                <a href="docs.html">Documentation</a>
+                <a href="https://www.npmjs.com/package/@kellyclaude/mcpshield">npm</a>
+                <a href="https://www.npmjs.com/package/@kellyclaude/mcpshield-core">Core</a>
+                <a href="https://www.npmjs.com/package/@kellyclaude/mcpshield-scanner">Scanner</a>
+            </div>
+            <p>&copy; 2026 MCPShield. MIT License. Built for the MCP community.</p>
+        </div>
+    </footer>
 
     <script>
         const servers = {
@@ -154,18 +279,18 @@
         function renderScanResults(serverKey) {
             const server = servers[serverKey];
             const resultsDiv = document.getElementById('scanResults');
-            
+
             let resultClass = 'result-clean';
-            let scoreClass = 'score-clean';
+            let scoreClass = 'clean';
             let verdictClass = 'verdict-clean';
-            
+
             if (server.verdict === 'warning') {
                 resultClass = 'result-warning';
-                scoreClass = 'score-warning';
+                scoreClass = 'warning';
                 verdictClass = 'verdict-warning';
             } else if (server.verdict === 'danger') {
                 resultClass = 'result-danger';
-                scoreClass = 'score-danger';
+                scoreClass = 'danger';
                 verdictClass = 'verdict-danger';
             }
 
@@ -179,13 +304,13 @@
                         <div class="score-circle ${scoreClass}">${server.riskScore}</div>
                         <div>
                             <div class="verdict ${verdictClass}">${verdictText}</div>
-                            <div style="color: var(--text-light);">Risk Score: ${server.riskScore}/100</div>
+                            <div style="color: var(--text-dim);">Risk Score: ${server.riskScore}/100</div>
                         </div>
                     </div>
                 </div>
 
                 <div class="findings">
-                    <h3 style="margin-bottom: 15px;">Security Findings:</h3>
+                    <h3>Security Findings:</h3>
             `;
 
             server.findings.forEach(finding => {
@@ -204,7 +329,7 @@
         function renderLockfile(serverKey) {
             const server = servers[serverKey];
             const lockfileDiv = document.getElementById('lockfileView');
-            
+
             const lockfile = {
                 version: "1.0.0",
                 generatedAt: new Date().toISOString(),
@@ -219,7 +344,7 @@
         function renderArtifacts(serverKey) {
             const server = servers[serverKey];
             const artifactDiv = document.getElementById('artifactList');
-            
+
             let html = '';
             server.artifacts.forEach(artifact => {
                 html += `
@@ -227,11 +352,11 @@
                         <div class="artifact-type">${artifact.type.toUpperCase()}</div>
                         <div class="artifact-url">${artifact.url}</div>
                         <div class="digest">✓ ${artifact.digest}</div>
-                        <div style="color: var(--text-light); font-size: 12px; margin-top: 5px;">Size: ${(artifact.size / 1024).toFixed(1)} KB</div>
+                        <div style="color: var(--text-dim); font-size: 12px; margin-top: 5px;">Size: ${(artifact.size / 1024).toFixed(1)} KB</div>
                     </div>
                 `;
             });
-            
+
             artifactDiv.innerHTML = html;
         }
 

@@ -4,53 +4,102 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Documentation - MCPShield</title>
-    <link rel="stylesheet" href="tailwind.css">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="theme.css">
 </head>
 <body>
     <header>
-        <div class="header-content">
-            <a href="index.html" class="logo">🛡️ MCPShield</a>
-            <a href="index.html" class="btn-back">← Back to Home</a>
+        <div class="container">
+            <div class="header-content">
+                <a href="index.html" class="logo">
+                    <span class="shield-icon">🛡️</span>
+                    MCPShield
+                </a>
+                <nav>
+                    <a href="index.html#features">Features</a>
+                    <a href="demo.html">Demo</a>
+                    <a href="quickstart.html">Quick Start</a>
+                    <a href="docs.html">Docs</a>
+                    <a href="https://www.npmjs.com/package/@kellyclaude/mcpshield">npm</a>
+                    <a href="https://github.com/kellyclaudeai/mcpshield" target="_blank">GitHub</a>
+                </nav>
+            </div>
         </div>
     </header>
 
     <div class="layout">
         <aside class="sidebar">
-            <h3>Documentation</h3>
-            <ul>
-                <li><a href="#cli-reference">CLI Reference</a></li>
-                <li><a href="#lockfile-spec">Lockfile Spec</a></li>
-                <li><a href="#policy-config">Policy Config</a></li>
-                <li><a href="#security-scanning">Security Scanning</a></li>
-                <li><a href="#integration">Integration</a></li>
-                <li><a href="#api">API Documentation</a></li>
-                <li><a href="#architecture">Architecture</a></li>
-            </ul>
+            <h3>DOCUMENTATION</h3>
+            <nav>
+                <a href="#packages">Packages</a>
+                <a href="#cli-reference">CLI Reference</a>
+                <a href="#lockfile-spec">Lockfile Spec</a>
+                <a href="#policy-config">Policy Config</a>
+                <a href="#security-scanning">Security Scanning</a>
+                <a href="#integration">Integration</a>
+                <a href="#api">API Documentation</a>
+                <a href="#architecture">Architecture</a>
+            </nav>
         </aside>
 
         <main class="doc-content">
-            <h1>📚 Documentation</h1>
+            <h1>DOCUMENTATION</h1>
             <p>Complete reference for MCPShield</p>
 
-            <h2 id="cli-reference">CLI Reference</h2>
+            <h2 id="packages">PACKAGES</h2>
+
+            <p>MCPShield is published as a monorepo with three packages:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Package</th>
+                        <th>Description</th>
+                        <th>npm Link</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>@kellyclaude/mcpshield</code></td>
+                        <td>Main CLI tool</td>
+                        <td><a href="https://www.npmjs.com/package/@kellyclaude/mcpshield" target="_blank">View on npm</a></td>
+                    </tr>
+                    <tr>
+                        <td><code>@kellyclaude/mcpshield-core</code></td>
+                        <td>Core types and clients</td>
+                        <td><a href="https://www.npmjs.com/package/@kellyclaude/mcpshield-core" target="_blank">View on npm</a></td>
+                    </tr>
+                    <tr>
+                        <td><code>@kellyclaude/mcpshield-scanner</code></td>
+                        <td>Security scanning engine</td>
+                        <td><a href="https://www.npmjs.com/package/@kellyclaude/mcpshield-scanner" target="_blank">View on npm</a></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="cli-reference">CLI REFERENCE</h2>
 
             <h3 id="init">mcp-shield init</h3>
             <p>Initialize MCPShield in your project.</p>
             <pre><code>mcp-shield init [options]</code></pre>
 
-            <h4>Options</h4>
+            <h4>OPTIONS</h4>
             <table>
-                <tr>
-                    <th>Flag</th>
-                    <th>Description</th>
-                </tr>
-                <tr>
-                    <td><code>--force</code></td>
-                    <td>Overwrite existing files</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Flag</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>--force</code></td>
+                        <td>Overwrite existing files</td>
+                    </tr>
+                </tbody>
             </table>
 
-            <h4>Creates</h4>
+            <h4>CREATES</h4>
             <ul>
                 <li><code>mcp.lock.json</code> - Empty lockfile</li>
                 <li><code>policy.yaml</code> - Default policy configuration</li>
@@ -60,32 +109,36 @@
             <p>Add an MCP server with verification and security scanning.</p>
             <pre><code>mcp-shield add &lt;server-name&gt; [options]</code></pre>
 
-            <h4>Arguments</h4>
+            <h4>ARGUMENTS</h4>
             <ul>
                 <li><code>server-name</code> - Namespace of the server (e.g., <code>io.github.user/repo</code>)</li>
             </ul>
 
-            <h4>Options</h4>
+            <h4>OPTIONS</h4>
             <table>
-                <tr>
-                    <th>Flag</th>
-                    <th>Description</th>
-                </tr>
-                <tr>
-                    <td><code>-y, --yes</code></td>
-                    <td>Skip confirmation prompts</td>
-                </tr>
-                <tr>
-                    <td><code>--skip-scan</code></td>
-                    <td>Skip security scan (not recommended)</td>
-                </tr>
-                <tr>
-                    <td><code>--version &lt;ver&gt;</code></td>
-                    <td>Specify exact version to add</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Flag</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>-y, --yes</code></td>
+                        <td>Skip confirmation prompts</td>
+                    </tr>
+                    <tr>
+                        <td><code>--skip-scan</code></td>
+                        <td>Skip security scan (not recommended)</td>
+                    </tr>
+                    <tr>
+                        <td><code>--version &lt;ver&gt;</code></td>
+                        <td>Specify exact version to add</td>
+                    </tr>
+                </tbody>
             </table>
 
-            <h4>Workflow</h4>
+            <h4>WORKFLOW</h4>
             <ol>
                 <li>Fetch metadata from MCP Registry</li>
                 <li>Verify namespace ownership (GitHub)</li>
@@ -100,23 +153,27 @@
             <p>Re-verify all servers in the lockfile.</p>
             <pre><code>mcp-shield verify [options]</code></pre>
 
-            <h4>Options</h4>
+            <h4>OPTIONS</h4>
             <table>
-                <tr>
-                    <th>Flag</th>
-                    <th>Description</th>
-                </tr>
-                <tr>
-                    <td><code>--server &lt;name&gt;</code></td>
-                    <td>Verify specific server only</td>
-                </tr>
-                <tr>
-                    <td><code>--strict</code></td>
-                    <td>Exit with error on any drift</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Flag</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>--server &lt;name&gt;</code></td>
+                        <td>Verify specific server only</td>
+                    </tr>
+                    <tr>
+                        <td><code>--strict</code></td>
+                        <td>Exit with error on any drift</td>
+                    </tr>
+                </tbody>
             </table>
 
-            <h4>Checks</h4>
+            <h4>CHECKS</h4>
             <ul>
                 <li>Download artifacts from cache or registry</li>
                 <li>Recompute digests</li>
@@ -128,27 +185,31 @@
             <p>Run comprehensive security scan on all servers.</p>
             <pre><code>mcp-shield scan [options]</code></pre>
 
-            <h4>Options</h4>
+            <h4>OPTIONS</h4>
             <table>
-                <tr>
-                    <th>Flag</th>
-                    <th>Description</th>
-                </tr>
-                <tr>
-                    <td><code>--server &lt;name&gt;</code></td>
-                    <td>Scan specific server only</td>
-                </tr>
-                <tr>
-                    <td><code>--json</code></td>
-                    <td>Output results as JSON</td>
-                </tr>
-                <tr>
-                    <td><code>--verbose</code></td>
-                    <td>Show detailed findings</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Flag</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>--server &lt;name&gt;</code></td>
+                        <td>Scan specific server only</td>
+                    </tr>
+                    <tr>
+                        <td><code>--json</code></td>
+                        <td>Output results as JSON</td>
+                    </tr>
+                    <tr>
+                        <td><code>--verbose</code></td>
+                        <td>Show detailed findings</td>
+                    </tr>
+                </tbody>
             </table>
 
-            <h4>Security Checks</h4>
+            <h4>SECURITY CHECKS</h4>
             <ul>
                 <li><strong>Typosquatting</strong> - Levenshtein distance against popular packages</li>
                 <li><strong>Code Patterns</strong> - Detect eval(), exec(), child_process</li>
@@ -157,7 +218,7 @@
                 <li><strong>Dependencies</strong> - Scan transitive dependencies</li>
             </ul>
 
-            <h2 id="lockfile-spec">Lockfile Specification</h2>
+            <h2 id="lockfile-spec">LOCKFILE SPECIFICATION</h2>
 
             <p>The <code>mcp.lock.json</code> file uses this schema:</p>
 
@@ -184,42 +245,46 @@
   }
 }</code></pre>
 
-            <h3>Fields</h3>
+            <h3>FIELDS</h3>
 
             <table>
-                <tr>
-                    <th>Field</th>
-                    <th>Type</th>
-                    <th>Description</th>
-                </tr>
-                <tr>
-                    <td><code>namespace</code></td>
-                    <td>string</td>
-                    <td>Unique identifier (e.g., io.github.user/repo)</td>
-                </tr>
-                <tr>
-                    <td><code>version</code></td>
-                    <td>string</td>
-                    <td>Semantic version</td>
-                </tr>
-                <tr>
-                    <td><code>verified</code></td>
-                    <td>boolean</td>
-                    <td>Whether namespace ownership was verified</td>
-                </tr>
-                <tr>
-                    <td><code>verificationMethod</code></td>
-                    <td>string</td>
-                    <td>How namespace was verified (github, npm, pypi)</td>
-                </tr>
-                <tr>
-                    <td><code>artifacts</code></td>
-                    <td>array</td>
-                    <td>Downloadable artifacts with digests</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Type</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>namespace</code></td>
+                        <td>string</td>
+                        <td>Unique identifier (e.g., io.github.user/repo)</td>
+                    </tr>
+                    <tr>
+                        <td><code>version</code></td>
+                        <td>string</td>
+                        <td>Semantic version</td>
+                    </tr>
+                    <tr>
+                        <td><code>verified</code></td>
+                        <td>boolean</td>
+                        <td>Whether namespace ownership was verified</td>
+                    </tr>
+                    <tr>
+                        <td><code>verificationMethod</code></td>
+                        <td>string</td>
+                        <td>How namespace was verified (github, npm, pypi)</td>
+                    </tr>
+                    <tr>
+                        <td><code>artifacts</code></td>
+                        <td>array</td>
+                        <td>Downloadable artifacts with digests</td>
+                    </tr>
+                </tbody>
             </table>
 
-            <h2 id="policy-config">Policy Configuration</h2>
+            <h2 id="policy-config">POLICY CONFIGURATION</h2>
 
             <p>The <code>policy.yaml</code> file defines security policies:</p>
 
@@ -262,50 +327,54 @@ policies:
                 <strong>Note:</strong> Policy enforcement is planned for future releases. Currently policies are advisory only.
             </div>
 
-            <h2 id="security-scanning">Security Scanning</h2>
+            <h2 id="security-scanning">SECURITY SCANNING</h2>
 
-            <h3>Risk Scoring</h3>
+            <h3>RISK SCORING</h3>
 
             <p>Each server receives a risk score from 0-100:</p>
 
             <table>
-                <tr>
-                    <th>Score</th>
-                    <th>Verdict</th>
-                    <th>Description</th>
-                </tr>
-                <tr>
-                    <td>0-30</td>
-                    <td>✅ CLEAN</td>
-                    <td>Safe to use</td>
-                </tr>
-                <tr>
-                    <td>31-60</td>
-                    <td>⚠️ WARNING</td>
-                    <td>Review findings before use</td>
-                </tr>
-                <tr>
-                    <td>61-80</td>
-                    <td>🚨 SUSPICIOUS</td>
-                    <td>High risk, not recommended</td>
-                </tr>
-                <tr>
-                    <td>81-100</td>
-                    <td>🚨 MALICIOUS</td>
-                    <td>Do not use</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Score</th>
+                        <th>Verdict</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>0-30</td>
+                        <td>CLEAN</td>
+                        <td>Safe to use</td>
+                    </tr>
+                    <tr>
+                        <td>31-60</td>
+                        <td>WARNING</td>
+                        <td>Review findings before use</td>
+                    </tr>
+                    <tr>
+                        <td>61-80</td>
+                        <td>SUSPICIOUS</td>
+                        <td>High risk, not recommended</td>
+                    </tr>
+                    <tr>
+                        <td>81-100</td>
+                        <td>MALICIOUS</td>
+                        <td>Do not use</td>
+                    </tr>
+                </tbody>
             </table>
 
-            <h3>Detection Rules</h3>
+            <h3>DETECTION RULES</h3>
 
-            <h4>Typosquatting (+30 points)</h4>
+            <h4>TYPOSQUATTING (+30 POINTS)</h4>
             <ul>
                 <li>Levenshtein distance &lt; 3 from popular package</li>
                 <li>Common character swaps (1 vs l, 0 vs O)</li>
                 <li>Name similarity to official packages</li>
             </ul>
 
-            <h4>Suspicious Code (+20 points each)</h4>
+            <h4>SUSPICIOUS CODE (+20 POINTS EACH)</h4>
             <ul>
                 <li><code>eval()</code> - Dynamic code execution</li>
                 <li><code>exec()</code> - Shell command execution</li>
@@ -313,23 +382,23 @@ policies:
                 <li>Obfuscated code (hex strings, base64)</li>
             </ul>
 
-            <h4>Network Calls (+15 points)</h4>
+            <h4>NETWORK CALLS (+15 POINTS)</h4>
             <ul>
                 <li>HTTP/HTTPS requests to unknown domains</li>
                 <li>WebSocket connections</li>
                 <li>DNS lookups to suspicious TLDs (.ru, .cn)</li>
             </ul>
 
-            <h4>Install Scripts (+10 points)</h4>
+            <h4>INSTALL SCRIPTS (+10 POINTS)</h4>
             <ul>
                 <li>postinstall, preinstall scripts</li>
                 <li>File system modifications</li>
                 <li>Download/execute behavior</li>
             </ul>
 
-            <h2 id="integration">Integration Examples</h2>
+            <h2 id="integration">INTEGRATION EXAMPLES</h2>
 
-            <h3>GitHub Actions</h3>
+            <h3>GITHUB ACTIONS</h3>
 
             <pre><code>name: Security Check
 on: [push, pull_request]
@@ -339,22 +408,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-      
+
       - name: Install MCPShield
         run: npm install -g @kellyclaude/mcpshield
-      
+
       - name: Verify MCP servers
         run: |
           mcp-shield verify --strict
           mcp-shield scan
 </code></pre>
 
-            <h3>Pre-commit Hook</h3>
+            <h3>PRE-COMMIT HOOK</h3>
 
             <pre><code>#!/bin/sh
 # .git/hooks/pre-commit
@@ -370,7 +439,7 @@ fi
 echo "✅ All MCP servers verified"
 exit 0</code></pre>
 
-            <h3>CI/CD Integration</h3>
+            <h3>CI/CD INTEGRATION</h3>
 
             <pre><code>// package.json
 {
@@ -380,9 +449,9 @@ exit 0</code></pre>
   }
 }</code></pre>
 
-            <h2 id="api">API Documentation</h2>
+            <h2 id="api">API DOCUMENTATION</h2>
 
-            <h3>Programmatic Usage</h3>
+            <h3>PROGRAMMATIC USAGE</h3>
 
             <p>Use MCPShield as a library in your Node.js applications:</p>
 
@@ -404,21 +473,24 @@ const lockfile = await Lockfile.load('mcp.lock.json');
 await lockfile.addServer(server);
 await lockfile.save();</code></pre>
 
-            <h3>Core Classes</h3>
+            <h3>CORE CLASSES</h3>
 
             <h4>RegistryClient</h4>
+            <p>Available in <a href="https://www.npmjs.com/package/@kellyclaude/mcpshield-core" target="_blank">@kellyclaude/mcpshield-core</a></p>
             <pre><code>class RegistryClient {
   async getServerMetadata(namespace: string): Promise&lt;ServerMetadata&gt;
   async fetchArtifacts(server: ServerMetadata): Promise&lt;Artifact[]&gt;
 }</code></pre>
 
             <h4>Scanner</h4>
+            <p>Available in <a href="https://www.npmjs.com/package/@kellyclaude/mcpshield-scanner" target="_blank">@kellyclaude/mcpshield-scanner</a></p>
             <pre><code>class Scanner {
   async scanServer(server: ServerMetadata): Promise&lt;ScanResult&gt;
   async scanPackage(packagePath: string): Promise&lt;ScanResult&gt;
 }</code></pre>
 
             <h4>Lockfile</h4>
+            <p>Available in <a href="https://www.npmjs.com/package/@kellyclaude/mcpshield-core" target="_blank">@kellyclaude/mcpshield-core</a></p>
             <pre><code>class Lockfile {
   static async load(path: string): Promise&lt;Lockfile&gt;
   async addServer(server: LockedServer): Promise&lt;void&gt;
@@ -426,9 +498,9 @@ await lockfile.save();</code></pre>
   async save(): Promise&lt;void&gt;
 }</code></pre>
 
-            <h2 id="architecture">Architecture</h2>
+            <h2 id="architecture">ARCHITECTURE</h2>
 
-            <h3>Monorepo Structure</h3>
+            <h3>MONOREPO STRUCTURE</h3>
 
             <pre><code>mcpshield/
 ├── packages/
@@ -449,7 +521,7 @@ await lockfile.save();</code></pre>
 │   └── e2e/
 └── docs/</code></pre>
 
-            <h3>Data Flow</h3>
+            <h3>DATA FLOW</h3>
 
             <ol>
                 <li><strong>Registry Fetch</strong> - RegistryClient fetches server metadata from MCP Registry</li>
@@ -460,32 +532,36 @@ await lockfile.save();</code></pre>
                 <li><strong>Lockfile Update</strong> - Verified server added to mcp.lock.json</li>
             </ol>
 
-            <h3>Verification Methods</h3>
+            <h3>VERIFICATION METHODS</h3>
 
             <table>
-                <tr>
-                    <th>Method</th>
-                    <th>Namespace Format</th>
-                    <th>Verification</th>
-                </tr>
-                <tr>
-                    <td>GitHub</td>
-                    <td>io.github.owner/repo</td>
-                    <td>GitHub API + repo ownership</td>
-                </tr>
-                <tr>
-                    <td>npm</td>
-                    <td>npm.package-name</td>
-                    <td>npm registry + maintainer list</td>
-                </tr>
-                <tr>
-                    <td>PyPI</td>
-                    <td>pypi.package-name</td>
-                    <td>PyPI API + owner verification</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Namespace Format</th>
+                        <th>Verification</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>GitHub</td>
+                        <td>io.github.owner/repo</td>
+                        <td>GitHub API + repo ownership</td>
+                    </tr>
+                    <tr>
+                        <td>npm</td>
+                        <td>npm.package-name</td>
+                        <td>npm registry + maintainer list</td>
+                    </tr>
+                    <tr>
+                        <td>PyPI</td>
+                        <td>pypi.package-name</td>
+                        <td>PyPI API + owner verification</td>
+                    </tr>
+                </tbody>
             </table>
 
-            <h3>Technology Stack</h3>
+            <h3>TECHNOLOGY STACK</h3>
 
             <ul>
                 <li><strong>TypeScript</strong> - Type-safe development</li>
@@ -496,7 +572,31 @@ await lockfile.save();</code></pre>
                 <li><strong>yaml</strong> - Policy parsing</li>
             </ul>
 
+            <h3>PUBLISHED PACKAGES</h3>
+
+            <p>The monorepo publishes three packages to npm:</p>
+
+            <ul>
+                <li><a href="https://www.npmjs.com/package/@kellyclaude/mcpshield" target="_blank">@kellyclaude/mcpshield</a> - Main CLI tool</li>
+                <li><a href="https://www.npmjs.com/package/@kellyclaude/mcpshield-core" target="_blank">@kellyclaude/mcpshield-core</a> - Core types and clients</li>
+                <li><a href="https://www.npmjs.com/package/@kellyclaude/mcpshield-scanner" target="_blank">@kellyclaude/mcpshield-scanner</a> - Security scanning engine</li>
+            </ul>
+
         </main>
     </div>
+
+    <footer>
+        <div class="container">
+            <div class="footer-links">
+                <a href="https://github.com/kellyclaudeai/mcpshield">GitHub</a>
+                <a href="quickstart.html">Quick Start</a>
+                <a href="docs.html">Documentation</a>
+                <a href="https://www.npmjs.com/package/@kellyclaude/mcpshield">npm</a>
+                <a href="https://www.npmjs.com/package/@kellyclaude/mcpshield-core">Core</a>
+                <a href="https://www.npmjs.com/package/@kellyclaude/mcpshield-scanner">Scanner</a>
+            </div>
+            <p>&copy; 2026 MCPShield. MIT License. Built for the MCP community.</p>
+        </div>
+    </footer>
 </body>
 </html>

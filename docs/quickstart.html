@@ -3,25 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quick Start - MCPShield</title>
-    <link rel="stylesheet" href="tailwind.css">
+    <title>QUICK START - MCPSHIELD</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="theme.css">
 </head>
 <body>
     <header>
-        <div class="header-content">
-            <a href="index.html" class="logo">🛡️ MCPShield</a>
-            <a href="index.html" class="btn-back">← Back to Home</a>
+        <div class="container">
+            <div class="header-content">
+                <a href="index.html" class="logo">
+                    <span class="shield-icon">🛡️</span>
+                    MCPShield
+                </a>
+                <nav>
+                    <a href="index.html#features">Features</a>
+                    <a href="demo.html">Demo</a>
+                    <a href="quickstart.html">Quick Start</a>
+                    <a href="docs.html">Docs</a>
+                    <a href="https://www.npmjs.com/package/@kellyclaude/mcpshield">npm</a>
+                    <a href="https://github.com/kellyclaudeai/mcpshield" target="_blank">GitHub</a>
+                </nav>
+            </div>
         </div>
     </header>
 
     <div class="container">
         <div class="doc-content">
-            <h1>🚀 Quick Start Guide</h1>
+            <h1>QUICK START GUIDE</h1>
             <p>Get MCPShield up and running in under 5 minutes</p>
 
-            <h2>Installation</h2>
-            
-            <h3>Option 1: From Source (Current)</h3>
+            <h2>INSTALLATION</h2>
+
+            <h3>Option 1: From npm (Recommended)</h3>
+            <p>MCPShield is now available on npm. Install globally to use the CLI:</p>
+            <pre><code># Install CLI globally
+npm install -g @kellyclaude/mcpshield
+
+# Verify installation
+mcp-shield --version</code></pre>
+
+            <div class="note">
+                <strong>NPM PACKAGES:</strong> MCPShield is published as multiple packages:
+                <ul style="margin-top: 10px;">
+                    <li><a href="https://www.npmjs.com/package/@kellyclaude/mcpshield" target="_blank">@kellyclaude/mcpshield</a> - CLI tool (recommended for most users)</li>
+                    <li><a href="https://www.npmjs.com/package/@kellyclaude/mcpshield-core" target="_blank">@kellyclaude/mcpshield-core</a> - Core library for programmatic use</li>
+                    <li><a href="https://www.npmjs.com/package/@kellyclaude/mcpshield-scanner" target="_blank">@kellyclaude/mcpshield-scanner</a> - Security scanner module</li>
+                </ul>
+            </div>
+
+            <h3>Option 2: From Source</h3>
+            <p>Build from source for development or testing:</p>
             <pre><code># Clone the repository
 git clone https://github.com/kellyclaudeai/mcpshield.git
 cd mcpshield
@@ -38,10 +69,7 @@ npm link packages/cli
 # Verify installation
 mcp-shield --version</code></pre>
 
-            <h3>Option 2: From npm (Coming Soon)</h3>
-            <pre><code>npm install -g @kellyclaude/mcpshield</code></pre>
-
-            <h2>Basic Usage</h2>
+            <h2>BASIC USAGE</h2>
 
             <h3>Step 1: Initialize MCPShield</h3>
             <p>Navigate to your project directory and initialize MCPShield:</p>
@@ -69,7 +97,7 @@ mcp-shield init</code></pre>
             </ol>
 
             <div class="note">
-                <strong>💡 Tip:</strong> Use <code>-y</code> or <code>--yes</code> to skip confirmation prompts:
+                <strong>TIP:</strong> Use <code>-y</code> or <code>--yes</code> to skip confirmation prompts:
                 <pre style="margin-top: 10px;"><code>mcp-shield add io.github.user/server-name --yes</code></pre>
             </div>
 
@@ -97,7 +125,7 @@ mcp-shield init</code></pre>
                 <li>Install script exploits</li>
             </ul>
 
-            <h2>Example Workflow</h2>
+            <h2>EXAMPLE WORKFLOW</h2>
 
             <pre><code># Initialize in your project
 cd ~/my-ai-app
@@ -114,7 +142,7 @@ mcp-shield scan
 # Check lockfile
 cat mcp.lock.json</code></pre>
 
-            <h2>Understanding the Lockfile</h2>
+            <h2>UNDERSTANDING THE LOCKFILE</h2>
 
             <p>The <code>mcp.lock.json</code> file tracks all verified servers:</p>
 
@@ -141,7 +169,7 @@ cat mcp.lock.json</code></pre>
   }
 }</code></pre>
 
-            <h2>Security Scan Output</h2>
+            <h2>SECURITY SCAN OUTPUT</h2>
 
             <p>When you run <code>mcp-shield scan</code>, you'll see:</p>
 
@@ -150,7 +178,7 @@ cat mcp.lock.json</code></pre>
 io.github.modelcontextprotocol/filesystem
   Risk Score: 15/100 (clean)
   Verdict: ✅ CLEAN
-  
+
   ✓ No typosquats detected
   ✓ No suspicious code patterns
   ✓ Dependencies verified
@@ -159,7 +187,7 @@ io.github.modelcontextprotocol/filesystem
 io.github.suspicious/package
   Risk Score: 75/100 (suspicious)
   Verdict: ⚠️ WARNING
-  
+
   ⚠️ eval() detected in src/core.js:45
   ⚠️ Network call to unverified endpoint
   ⚠️ Install script present
@@ -170,7 +198,7 @@ Summary:
   Warnings: 1
   Dangerous: 0</code></pre>
 
-            <h2>Policy Configuration</h2>
+            <h2>POLICY CONFIGURATION</h2>
 
             <p>The <code>policy.yaml</code> file lets you define security policies:</p>
 
@@ -199,10 +227,10 @@ policies:
     - modelcontextprotocol</code></pre>
 
             <div class="warning">
-                <strong>⚠️ Warning:</strong> Policy enforcement is planned for a future release. Currently, policies are advisory only.
+                <strong>WARNING:</strong> Policy enforcement is planned for a future release. Currently, policies are advisory only.
             </div>
 
-            <h2>Next Steps</h2>
+            <h2>NEXT STEPS</h2>
 
             <ul>
                 <li>Read the <a href="docs.html">full documentation</a></li>
@@ -212,10 +240,12 @@ policies:
                 <li>Report issues on <a href="https://github.com/kellyclaudeai/mcpshield/issues">GitHub Issues</a></li>
             </ul>
 
-            <h2>Common Issues</h2>
+            <h2>COMMON ISSUES</h2>
 
             <h3>Command not found: mcp-shield</h3>
-            <p>Make sure you've linked the CLI:</p>
+            <p>Make sure you've installed the package globally:</p>
+            <pre><code>npm install -g @kellyclaude/mcpshield</code></pre>
+            <p>If installing from source, link the CLI:</p>
             <pre><code>cd /path/to/mcpshield
 npm link packages/cli</code></pre>
 
@@ -226,7 +256,7 @@ npm link packages/cli</code></pre>
             <h3>Verification failed</h3>
             <p>The server may not have a valid GitHub repository. Check the namespace format and repository ownership.</p>
 
-            <h2>Need Help?</h2>
+            <h2>NEED HELP?</h2>
 
             <p>If you run into issues:</p>
             <ul>
@@ -238,5 +268,19 @@ npm link packages/cli</code></pre>
 
         </div>
     </div>
+
+    <footer>
+        <div class="container">
+            <div class="footer-links">
+                <a href="https://github.com/kellyclaudeai/mcpshield">GitHub</a>
+                <a href="quickstart.html">Quick Start</a>
+                <a href="docs.html">Documentation</a>
+                <a href="https://www.npmjs.com/package/@kellyclaude/mcpshield">npm</a>
+                <a href="https://www.npmjs.com/package/@kellyclaude/mcpshield-core">Core</a>
+                <a href="https://www.npmjs.com/package/@kellyclaude/mcpshield-scanner">Scanner</a>
+            </div>
+            <p>&copy; 2026 MCPShield. MIT License. Built for the MCP community.</p>
+        </div>
+    </footer>
 </body>
 </html>
