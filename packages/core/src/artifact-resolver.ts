@@ -8,6 +8,8 @@ import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as https from 'https';
+import { Transform } from 'stream';
+import { pipeline } from 'stream/promises';
 
 export interface ArtifactInfo {
   url: string;
@@ -85,45 +87,53 @@ export class NpmResolver extends ArtifactResolver {
   async download(artifact: ArtifactInfo, outputPath: string): Promise<string> {
     await fs.promises.mkdir(path.dirname(outputPath), { recursive: true });
     
-    return new Promise((resolve, reject) => {
-      const file = fs.createWriteStream(outputPath);
-      
-      // Determine hash algorithm from integrity string
-      let algorithm = 'sha512'; // npm default
-      if (artifact.integrity) {
-        if (artifact.integrity.startsWith('sha256-')) {
-          algorithm = 'sha256';
-        } else if (artifact.integrity.startsWith('sha512-')) {
-          algorithm = 'sha512';
-        }
+    // Determine hash algorithm from integrity string
+    let algorithm = 'sha512'; // npm default
+    if (artifact.integrity) {
+      if (artifact.integrity.startsWith('sha256-')) {
+        algorithm = 'sha256';
+      } else if (artifact.integrity.startsWith('sha512-')) {
+        algorithm = 'sha512';
       }
-      
-      const hash = crypto.createHash(algorithm);
-      
-      https.get(artifact.url, (res) => {
+    }
+
+    const hash = crypto.createHash(algorithm);
+
+    return new Promise((resolve, reject) => {
+      const request = https.get(artifact.url, (res) => {
         if (res.statusCode !== 200) {
-          return reject(new Error(`Download failed: ${res.statusCode}`));
+          res.resume(); // drain
+          reject(new Error(`Download failed: ${res.statusCode}`));
+          return;
         }
-        
-        res.on('data', (chunk) => {
-          hash.update(chunk);
-          file.write(chunk);
+
+        const hasher = new Transform({
+          transform(chunk, _encoding, callback) {
+            hash.update(chunk);
+            callback(null, chunk);
+          },
         });
-        
-        res.on('end', () => {
-          file.end();
-          const digest = `${algorithm}-${hash.digest('base64')}`;
-          
-          // Verify integrity if provided
-          if (artifact.integrity && artifact.integrity !== digest) {
-            fs.unlinkSync(outputPath);
-            return reject(new Error(`Integrity mismatch: expected ${artifact.integrity}, got ${digest}`));
-          }
-          
-          resolve(digest);
-        });
-      }).on('error', (err) => {
-        fs.unlinkSync(outputPath);
+
+        pipeline(res, hasher, fs.createWriteStream(outputPath))
+          .then(async () => {
+            const digest = `${algorithm}-${hash.digest('base64')}`;
+
+            if (artifact.integrity && artifact.integrity !== digest) {
+              await fs.promises.unlink(outputPath).catch(() => {});
+              reject(new Error(`Integrity mismatch: expected ${artifact.integrity}, got ${digest}`));
+              return;
+            }
+
+            resolve(digest);
+          })
+          .catch(async (err) => {
+            await fs.promises.unlink(outputPath).catch(() => {});
+            reject(err);
+          });
+      });
+
+      request.on('error', async (err) => {
+        await fs.promises.unlink(outputPath).catch(() => {});
         reject(err);
       });
     });
@@ -210,34 +220,43 @@ export class PyPIResolver extends ArtifactResolver {
   async download(artifact: ArtifactInfo, outputPath: string): Promise<string> {
     await fs.promises.mkdir(path.dirname(outputPath), { recursive: true });
     
+    const hash = crypto.createHash('sha256');
+
     return new Promise((resolve, reject) => {
-      const file = fs.createWriteStream(outputPath);
-      const hash = crypto.createHash('sha256');
-      
-      https.get(artifact.url, (res) => {
+      const request = https.get(artifact.url, (res) => {
         if (res.statusCode !== 200) {
-          return reject(new Error(`Download failed: ${res.statusCode}`));
+          res.resume(); // drain
+          reject(new Error(`Download failed: ${res.statusCode}`));
+          return;
         }
-        
-        res.on('data', (chunk) => {
-          hash.update(chunk);
-          file.write(chunk);
+
+        const hasher = new Transform({
+          transform(chunk, _encoding, callback) {
+            hash.update(chunk);
+            callback(null, chunk);
+          },
         });
-        
-        res.on('end', () => {
-          file.end();
-          const digest = `sha256-${hash.digest('base64')}`;
-          
-          // Verify digest if provided
-          if (artifact.digest && artifact.digest !== digest) {
-            fs.unlinkSync(outputPath);
-            return reject(new Error(`Digest mismatch: expected ${artifact.digest}, got ${digest}`));
-          }
-          
-          resolve(digest);
-        });
-      }).on('error', (err) => {
-        fs.unlinkSync(outputPath);
+
+        pipeline(res, hasher, fs.createWriteStream(outputPath))
+          .then(async () => {
+            const digest = `sha256-${hash.digest('base64')}`;
+
+            if (artifact.digest && artifact.digest !== digest) {
+              await fs.promises.unlink(outputPath).catch(() => {});
+              reject(new Error(`Digest mismatch: expected ${artifact.digest}, got ${digest}`));
+              return;
+            }
+
+            resolve(digest);
+          })
+          .catch(async (err) => {
+            await fs.promises.unlink(outputPath).catch(() => {});
+            reject(err);
+          });
+      });
+
+      request.on('error', async (err) => {
+        await fs.promises.unlink(outputPath).catch(() => {});
         reject(err);
       });
     });

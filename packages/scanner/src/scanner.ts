@@ -145,7 +145,11 @@ export class BasicScanner implements SecurityScanner {
       
     } finally {
       // Cleanup temp directory
-      await fs.rm(tempDir, { recursive: true, force: true });
+      try {
+        await fs.rm(tempDir, { recursive: true, force: true });
+      } catch {
+        // Best-effort cleanup; do not fail scan due to temp dir removal issues
+      }
     }
     
     return { findings, riskScore: Math.min(100, riskScore) };
