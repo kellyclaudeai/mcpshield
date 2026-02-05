@@ -10,7 +10,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc -b",
-    "test": "node --import tsx --test test/**/*.test.ts",
+    "test": "node ../../scripts/run-node-tests.mjs --import tsx test/**/*.test.ts",
     "clean": "rm -rf dist"
   },
   "dependencies": {
