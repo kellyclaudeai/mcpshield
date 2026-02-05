@@ -41,3 +41,4 @@ temp/
 
 # Lock files (keep mcp.lock examples)
 !examples/mcp.lock.example.json
+.vercel
