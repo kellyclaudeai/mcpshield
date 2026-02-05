@@ -1,0 +1,15 @@
+{
+  "version": "1.0.0",
+  "generatedAt": "2026-02-05T13:13:38.144Z",
+  "servers": {
+    "io.github.modelcontextprotocol/brave-search": {
+      "namespace": "io.github.modelcontextprotocol/brave-search",
+      "version": "1.0.0",
+      "repository": "https://github.com/modelcontextprotocol/brave-search",
+      "verified": false,
+      "verificationMethod": "github",
+      "verifiedOwner": null,
+      "fetchedAt": "2026-02-05T13:13:38.141Z"
+    }
+  }
+}
