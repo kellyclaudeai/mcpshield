@@ -52,7 +52,7 @@ mcp-shield verify
 mcp-shield scan
 ```
 
-Once published to npm, you’ll be able to run without cloning:
+Run without cloning:
 ```bash
 npx @kellyclaude/mcpshield --help
 ```
