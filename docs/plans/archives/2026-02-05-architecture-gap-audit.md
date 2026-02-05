@@ -18,7 +18,7 @@ This checklist captures the highest-leverage missing pieces and refactors to ful
 
 ## 2) Lockfile + Artifact Resolution (Phase 3 core)
 ### 2.1 Lockfile manager
-- [ ] Implement `mcp.lock` read/write/update APIs in `@mcpshield/core`
+- [ ] Implement `mcp.lock` read/write/update APIs in `@kellyclaude/mcpshield-core`
 - [ ] Add lockfile normalization rules (stable ordering, canonical formatting)
 - [ ] Add schema validation + friendly error messages for malformed lockfiles
 
@@ -37,7 +37,7 @@ This checklist captures the highest-leverage missing pieces and refactors to ful
 
 ## 3) Local Scanner (Phase 4)
 ### 3.1 Scanner pipeline (baseline)
-- [ ] Implement `@mcpshield/scanner` core pipeline: unpack → enumerate files → run detectors → score
+- [ ] Implement `@kellyclaude/mcpshield-scanner` core pipeline: unpack → enumerate files → run detectors → score
 - [ ] Add dependency graph extraction (for npm: parse `package.json` + lock; run `npm ls --json` in a temp dir)
 - [ ] Add typosquat detection using `fast-levenshtein` with allow/deny thresholds
 - [ ] Add suspicious pattern detectors (high-signal only): `child_process`, `eval`, `Function`, fs traversal, credential regexes

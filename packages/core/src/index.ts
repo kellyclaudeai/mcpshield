@@ -1,5 +1,5 @@
 /**
- * @mcpshield/core - Core functionality for MCPShield
+ * @kellyclaude/mcpshield-core - Core functionality for MCPShield
  */
 
 export * from './types.js';

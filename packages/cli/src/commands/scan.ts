@@ -18,8 +18,8 @@ import {
   getDefaultPolicy,
   loadPolicy,
   validatePolicy,
-} from '@mcpshield/core';
-import { BasicScanner } from '@mcpshield/scanner';
+} from '@kellyclaude/mcpshield-core';
+import { BasicScanner } from '@kellyclaude/mcpshield-scanner';
 import chalk from 'chalk';
 import { generateSarifReport } from '../sarif.js';
 import {

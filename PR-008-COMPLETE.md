@@ -49,7 +49,7 @@ mcp-shield scan --ci --sarif > results.sarif
 2. Setup Node.js 20 with npm cache
 3. Install dependencies (`npm ci`)
 4. Build MCPShield (`npm run build`)
-5. Run security scan (`npm run -w @mcpshield/cli mcp-shield scan --ci --sarif > results.sarif`)
+5. Run security scan (`npm run -w @kellyclaude/mcpshield mcp-shield scan --ci --sarif > results.sarif`)
 6. Upload SARIF to GitHub (`github/codeql-action/upload-sarif@v3`)
 
 **Permissions:**
@@ -155,7 +155,7 @@ Total: 33 tests passed
   run: |
     npm ci
     npm run build
-    npm run -w @mcpshield/cli mcp-shield scan --ci --sarif > results.sarif
+    npm run -w @kellyclaude/mcpshield mcp-shield scan --ci --sarif > results.sarif
   continue-on-error: true
 
 - name: Upload SARIF

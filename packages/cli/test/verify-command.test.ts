@@ -4,7 +4,7 @@ import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 
-import { CacheManager } from '@mcpshield/core';
+import { CacheManager } from '@kellyclaude/mcpshield-core';
 import { verifyCommand } from '../src/commands/verify.js';
 import { EXIT_GENERAL_FAILURE, setGlobalOptions } from '../src/output.js';
 
@@ -96,4 +96,3 @@ describe('verifyCommand', () => {
     assert.equal(parsed.summary.drift, 1);
   });
 });
-

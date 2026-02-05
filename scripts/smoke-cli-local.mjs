@@ -49,7 +49,7 @@ async function packWorkspace(workspace) {
 }
 
 async function main() {
-  const workspaces = ['@mcpshield/core', '@mcpshield/scanner', '@mcpshield/cli'];
+  const workspaces = ['@kellyclaude/mcpshield-core', '@kellyclaude/mcpshield-scanner', '@kellyclaude/mcpshield'];
   const tarballs = [];
 
   for (const workspace of workspaces) {
@@ -59,13 +59,13 @@ async function main() {
     });
   }
 
-  const cliTarball = tarballs.find((entry) => entry.workspace === '@mcpshield/cli');
+  const cliTarball = tarballs.find((entry) => entry.workspace === '@kellyclaude/mcpshield');
   if (!cliTarball) {
-    throw new Error('Missing packed @mcpshield/cli tarball');
+    throw new Error('Missing packed @kellyclaude/mcpshield tarball');
   }
 
   const dependencyTarballs = tarballs
-    .filter((entry) => entry.workspace !== '@mcpshield/cli')
+    .filter((entry) => entry.workspace !== '@kellyclaude/mcpshield')
     .map((entry) => entry.file);
 
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mcpshield-smoke-local-cli-'));

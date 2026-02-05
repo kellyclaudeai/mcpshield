@@ -1,5 +1,5 @@
 /**
- * @mcpshield/scanner - Security scanning functionality
+ * @kellyclaude/mcpshield-scanner - Security scanning functionality
  */
 
 export * from './types.js';

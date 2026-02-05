@@ -9,9 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Initial release of MCPShield
-- Core registry client and lockfile management (@mcpshield/core)
-- Security scanning functionality (@mcpshield/scanner)
-- Command-line interface (@mcpshield/cli)
+- Core registry client and lockfile management (@kellyclaude/mcpshield-core)
+- Security scanning functionality (@kellyclaude/mcpshield-scanner)
+- Command-line interface (@kellyclaude/mcpshield)
 - Automated release workflow with npm trusted publishing
 - Support for MCP server supply chain security
 

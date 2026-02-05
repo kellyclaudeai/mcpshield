@@ -11,7 +11,9 @@ module.exports = {
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
   moduleNameMapper: {
-    '^@mcpshield/(.*)$': '<rootDir>/packages/$1/src'
+    '^@kellyclaude/mcpshield$': '<rootDir>/packages/cli/src',
+    '^@kellyclaude/mcpshield-core$': '<rootDir>/packages/core/src',
+    '^@kellyclaude/mcpshield-scanner$': '<rootDir>/packages/scanner/src'
   },
   testTimeout: 30000,
   verbose: true

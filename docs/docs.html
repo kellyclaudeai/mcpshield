@@ -346,7 +346,7 @@ jobs:
           node-version: '18'
       
       - name: Install MCPShield
-        run: npm install -g @mcpshield/cli
+        run: npm install -g @kellyclaude/mcpshield
       
       - name: Verify MCP servers
         run: |
@@ -386,7 +386,7 @@ exit 0</code></pre>
 
             <p>Use MCPShield as a library in your Node.js applications:</p>
 
-            <pre><code>import { RegistryClient, Scanner, Lockfile } from '@mcpshield/core';
+            <pre><code>import { RegistryClient, Scanner, Lockfile } from '@kellyclaude/mcpshield-core';
 
 // Fetch server metadata
 const client = new RegistryClient();

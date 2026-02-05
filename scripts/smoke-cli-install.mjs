@@ -44,7 +44,7 @@ function runCommand(cmd, args, options = {}) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mcpshield-smoke-cli-'));
-  const packageSpec = `@mcpshield/cli@${args.version}`;
+  const packageSpec = `@kellyclaude/mcpshield@${args.version}`;
 
   try {
     await runCommand('npm', ['init', '-y'], { cwd: tempDir });

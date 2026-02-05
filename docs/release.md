@@ -9,7 +9,7 @@ MCPShield uses automated releases via GitHub Actions. The release workflow suppo
 1. **Preferred:** npm trusted publishing (OIDC) with provenance (no long-lived tokens)
 2. **Fallback:** `NPM_TOKEN` secret (automation token that does not require OTP)
 
-Both modes publish packages in dependency order (`@mcpshield/core` -> `@mcpshield/scanner` -> `@mcpshield/cli`) via `scripts/publish-workspaces.mjs`.
+Both modes publish packages in dependency order (`@kellyclaude/mcpshield-core` -> `@kellyclaude/mcpshield-scanner` -> `@kellyclaude/mcpshield`) via `scripts/publish-workspaces.mjs`.
 
 ## One-Time Setup: Configure npm Trusted Publishing
 
@@ -17,21 +17,25 @@ Before the first release, you must configure npm trusted publishing for each pac
 
 ### Prerequisites
 
+0. The npm scope exists and you can publish to it:
+   - `@kellyclaude/*` requires an npm **user or org** named `kellyclaude`
+   - Your npm account must have permission to publish under that scope
+
 1. You must have publish access to the following npm packages:
-   - `@mcpshield/core`
-   - `@mcpshield/scanner`
-   - `@mcpshield/cli`
+   - `@kellyclaude/mcpshield-core`
+   - `@kellyclaude/mcpshield-scanner`
+   - `@kellyclaude/mcpshield`
 
 2. You must have admin access to the GitHub repository
 
 ### Configuration Steps
 
-For **each package** (@mcpshield/core, @mcpshield/scanner, @mcpshield/cli):
+For **each package** (@kellyclaude/mcpshield-core, @kellyclaude/mcpshield-scanner, @kellyclaude/mcpshield):
 
 1. **Log in to npm**: Go to [npmjs.com](https://www.npmjs.com/) and sign in
 
 2. **Navigate to package settings**:
-   - Go to the package page (e.g., `https://www.npmjs.com/package/@mcpshield/core`)
+   - Go to the package page (e.g., `https://www.npmjs.com/package/@kellyclaude/mcpshield-core`)
    - Click "Settings" tab
    - Click "Publishing access" in the left sidebar
 
@@ -108,6 +112,15 @@ Once the tag is pushed, GitHub Actions will automatically:
 4. Check npm for the published packages
 5. Verify the GitHub Release was created
 
+### Re-running a Tag Release (workflow_dispatch)
+
+If a tag already exists and you need to re-run publishing (e.g., after fixing CI config), you can run the `Release` workflow manually and pass the tag:
+
+1. Go to GitHub Actions
+2. Select `Release`
+3. Click "Run workflow"
+4. Enter `tag` (e.g., `v0.1.2`)
+
 ## Troubleshooting
 
 ### Publish fails with authentication error
@@ -115,6 +128,14 @@ Once the tag is pushed, GitHub Actions will automatically:
 - **Cause**: Neither OIDC trusted publishing nor `NPM_TOKEN` is configured
 - **Solution (OIDC)**: Re-check the trusted publishing configuration steps above. Ensure the repository owner, name, and workflow file path are exact matches.
 - **Solution (token)**: Add `NPM_TOKEN` as a GitHub Actions secret for the repository.
+
+### Publish fails with `E404 Scope not found` (or `you do not have permission`)
+
+- **Cause**: The npm scope `@kellyclaude` does not exist, or the token/user does not have publish permission for that scope.
+- **Fix**:
+  1. Create an npm org (or user) named `kellyclaude` on npmjs.com.
+  2. Add your npm user to the org and grant publish permission.
+  3. Use a **granular automation token** (classic tokens may be revoked) or publish once manually then switch to OIDC trusted publishing.
 
 ### Workflow fails on tests
 
@@ -124,7 +145,7 @@ Once the tag is pushed, GitHub Actions will automatically:
 ### Package dependencies out of sync
 
 - **Cause**: Version mismatches between workspace packages
-- **Solution**: Ensure all three packages have the same version number and that `@mcpshield/scanner` and `@mcpshield/cli` reference the correct `@mcpshield/core` version.
+- **Solution**: Ensure all three packages have the same version number and that `@kellyclaude/mcpshield-scanner` and `@kellyclaude/mcpshield` reference the correct `@kellyclaude/mcpshield-core` version.
 
 ### Changelog generation is empty
 
@@ -137,9 +158,9 @@ If a release needs to be rolled back:
 
 1. **Deprecate the npm packages**:
    ```bash
-   npm deprecate @mcpshield/core@0.2.0 "This version has been deprecated due to [reason]"
-   npm deprecate @mcpshield/scanner@0.2.0 "This version has been deprecated due to [reason]"
-   npm deprecate @mcpshield/cli@0.2.0 "This version has been deprecated due to [reason]"
+   npm deprecate @kellyclaude/mcpshield-core@0.2.0 "This version has been deprecated due to [reason]"
+   npm deprecate @kellyclaude/mcpshield-scanner@0.2.0 "This version has been deprecated due to [reason]"
+   npm deprecate @kellyclaude/mcpshield@0.2.0 "This version has been deprecated due to [reason]"
    ```
 
 2. **Delete the GitHub Release** (optional):

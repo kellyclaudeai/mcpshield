@@ -1,11 +1,11 @@
-# @mcpshield/cli
+# @kellyclaude/mcpshield
 
 Command-line interface for MCPShield - Supply chain security for MCP servers.
 
 ## Installation
 
 ```bash
-npm install -g @mcpshield/cli
+npm install -g @kellyclaude/mcpshield
 ```
 
 ## Commands
@@ -140,7 +140,7 @@ packages/cli/
 
 ## Dependencies
 
-- **@mcpshield/core** - Registry client and namespace verification
+- **@kellyclaude/mcpshield-core** - Registry client and namespace verification
 - **commander** - CLI framework
 - **chalk** - Terminal colors
 - **ora** - Spinners

@@ -6,7 +6,7 @@
 
 import chalk from 'chalk';
 import { createRequire } from 'module';
-import { LockfileManager } from '@mcpshield/core';
+import { LockfileManager } from '@kellyclaude/mcpshield-core';
 import {
   EXIT_SUCCESS,
   EXIT_USER_ERROR,
@@ -109,4 +109,3 @@ export async function lockValidateCommand(_options: { json?: boolean; ci?: boole
 
   return validation.valid ? EXIT_SUCCESS : EXIT_USER_ERROR;
 }
-

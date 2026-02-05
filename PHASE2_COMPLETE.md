@@ -26,7 +26,7 @@ mcpshield/
 - ESM (ES Modules) throughout
 - Proper dependency graph: cli → scanner → core
 
-### 2. @mcpshield/core Package ✅
+### 2. @kellyclaude/mcpshield-core Package ✅
 
 **Purpose**: Core functionality - registry client, types, shared utilities
 
@@ -59,7 +59,7 @@ const identity = client.extractPublisherIdentity(response);
 - `ajv` v8 - JSON schema validation
 - `ajv-formats` - Additional format validators
 
-### 3. @mcpshield/cli Package ✅
+### 3. @kellyclaude/mcpshield Package ✅
 
 **Purpose**: Command-line interface for end users
 
@@ -83,7 +83,7 @@ mcp-shield scan                 # Coming soon
 - `ora` v8 - Spinners for async operations
 - `prompts` v2 - Interactive user input
 
-### 4. @mcpshield/scanner Package ✅
+### 4. @kellyclaude/mcpshield-scanner Package ✅
 
 **Purpose**: Security scanning and vulnerability detection
 

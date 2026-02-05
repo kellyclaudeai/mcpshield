@@ -13,7 +13,7 @@ import {
   LockfileEntry,
   LockfileManager,
   NpmResolver,
-} from '@mcpshield/core';
+} from '@kellyclaude/mcpshield-core';
 import { createRequire } from 'module';
 import {
   EXIT_GENERAL_FAILURE,
@@ -289,4 +289,3 @@ export async function verifyCommand(options: VerifyCommandOptions = {}): Promise
   if (drift > 0 || errors > 0) return EXIT_GENERAL_FAILURE;
   return EXIT_SUCCESS;
 }
-

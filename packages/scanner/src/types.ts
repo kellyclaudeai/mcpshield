@@ -2,7 +2,7 @@
  * Types for security scanning
  */
 
-import { Finding, DependencyAnalysis, Package } from '@mcpshield/core';
+import { Finding, DependencyAnalysis, Package } from '@kellyclaude/mcpshield-core';
 
 export interface ScanResult {
   verdict: 'clean' | 'warning' | 'suspicious' | 'malicious' | 'unknown';

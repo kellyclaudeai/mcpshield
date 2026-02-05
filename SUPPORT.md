@@ -44,7 +44,7 @@ A: Two options:
 
 ```bash
 # Option 1: Run directly with npx (recommended)
-npx @mcpshield/cli init
+npx @kellyclaude/mcpshield init
 
 # Option 2: Clone and build from source
 git clone https://github.com/kellyclaudeai/mcpshield.git

@@ -218,7 +218,7 @@ Files to add:
 - [x] `CONTRIBUTING.md` (how to run, test, submit PRs)
 - [x] Fix placeholder links and install instructions:
   - update root `README.md` clone URL + docs links
-  - ensure `README.md` documents `npx @mcpshield/cli` as the default install/run path once published
+  - ensure `README.md` documents `npx @kellyclaude/mcpshield` as the default install/run path once published
 
 Acceptance:
 - [x] `npm test` still passes.
@@ -227,7 +227,7 @@ Acceptance:
 ### PR-002 — Lockfile schema + atomic writes
 Implement:
 - [x] Add JSON Schema: `schemas/mcp.lock.schema.json` matching current `LockfileManager` format (`version`, `generatedAt`, `servers{}`).
-- [x] Ensure schemas are packaged with `@mcpshield/core` and loaded from in-package paths (not repo-relative paths).
+- [x] Ensure schemas are packaged with `@kellyclaude/mcpshield-core` and loaded from in-package paths (not repo-relative paths).
 - [x] Update `LockfileManager.validate()` to validate using AJV against the schema (keep current checks as a fallback only if schema missing).
 - [x] Implement atomic writes in `LockfileManager.write()`:
   - write to `${lockfilePath}.tmp.<pid>.<rand>`
@@ -400,7 +400,7 @@ Acceptance:
 
 ### PR-009 — Release automation (npm publishing via trusted publishing)
 Implement:
-- [x] Use npm “trusted publishing” (OIDC) for `@mcpshield/core`, `@mcpshield/scanner`, `@mcpshield/cli`
+- [x] Use npm “trusted publishing” (OIDC) for `@kellyclaude/mcpshield-core`, `@kellyclaude/mcpshield-scanner`, `@kellyclaude/mcpshield`
 - [x] Add `.github/workflows/release.yml`:
   - only on tags `v*`
   - `permissions: id-token: write, contents: write`

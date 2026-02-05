@@ -10,7 +10,7 @@ import * as os from 'os';
 import * as dns from 'dns/promises';
 import * as https from 'https';
 import { fileURLToPath } from 'url';
-import { CacheManager } from '@mcpshield/core';
+import { CacheManager } from '@kellyclaude/mcpshield-core';
 import { EXIT_GENERAL_FAILURE, EXIT_SUCCESS, debugLog, getGlobalOptions, logError, logInfo, writeJson } from '../output.js';
 
 const __filename = fileURLToPath(import.meta.url);

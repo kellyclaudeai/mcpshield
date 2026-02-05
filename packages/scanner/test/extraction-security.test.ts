@@ -5,7 +5,7 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert';
 import { BasicScanner } from '../src/scanner.js';
-import { Package } from '@mcpshield/core';
+import { Package } from '@kellyclaude/mcpshield-core';
 import * as tar from 'tar';
 import * as fs from 'fs/promises';
 import * as path from 'path';

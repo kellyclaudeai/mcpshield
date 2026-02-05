@@ -281,7 +281,7 @@ mcp-shield add io.github.modelcontextprotocol/fetch
 When adding dependencies:
 
 - Add to the specific package (`packages/core`, `packages/cli`, etc.)
-- Use `npm install <package> -w @mcpshield/core` syntax
+- Use `npm install <package> -w @kellyclaude/mcpshield-core` syntax
 - Keep root-level dependencies minimal (dev tools only)
 
 ## Questions?

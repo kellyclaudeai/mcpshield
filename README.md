@@ -54,7 +54,7 @@ mcp-shield scan
 
 Once published to npm, you’ll be able to run without cloning:
 ```bash
-npx @mcpshield/cli --help
+npx @kellyclaude/mcpshield --help
 ```
 
 ## Features
@@ -248,9 +248,9 @@ mcp-shield add <server-name>
 
 MCPShield uses npm workspaces for monorepo management:
 
-- **@mcpshield/core** - Shared types, registry client, artifact resolution
-- **@mcpshield/cli** - User-facing command-line tool
-- **@mcpshield/scanner** - Security analysis engine
+- **@kellyclaude/mcpshield-core** - Shared types, registry client, artifact resolution
+- **@kellyclaude/mcpshield** - User-facing command-line tool
+- **@kellyclaude/mcpshield-scanner** - Security analysis engine
 
 Dependencies flow: `cli → scanner → core`
 

@@ -2,7 +2,7 @@
  * Cache management commands
  */
 
-import { CacheManager } from '@mcpshield/core';
+import { CacheManager } from '@kellyclaude/mcpshield-core';
 import chalk from 'chalk';
 import { getGlobalOptions, logInfo, writeJson } from '../output.js';
 

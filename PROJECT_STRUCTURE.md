@@ -20,7 +20,7 @@ mcpshield/
 ├── PROJECT_STRUCTURE.md        # This file (NEW!)
 │
 ├── packages/
-│   ├── core/                   # @mcpshield/core
+│   ├── core/                   # @kellyclaude/mcpshield-core
 │   │   ├── package.json
 │   │   ├── tsconfig.json
 │   │   ├── README.md
@@ -32,7 +32,7 @@ mcpshield/
 │   │   │   └── registry-client.test.ts  # 28 passing tests
 │   │   └── dist/                      # Compiled JavaScript (gitignored)
 │   │
-│   ├── cli/                    # @mcpshield/cli
+│   ├── cli/                    # @kellyclaude/mcpshield
 │   │   ├── package.json
 │   │   ├── tsconfig.json
 │   │   ├── src/
@@ -43,7 +43,7 @@ mcpshield/
 │   │   ├── test/                      # (empty - tests coming in Phase 3)
 │   │   └── dist/                      # Compiled JavaScript (gitignored)
 │   │
-│   └── scanner/                # @mcpshield/scanner
+│   └── scanner/                # @kellyclaude/mcpshield-scanner
 │       ├── package.json
 │       ├── tsconfig.json
 │       ├── src/
@@ -90,7 +90,7 @@ mcpshield/
 
 ## Package Dependencies
 
-### @mcpshield/core
+### @kellyclaude/mcpshield-core
 ```json
 {
   "dependencies": {
@@ -101,12 +101,12 @@ mcpshield/
 }
 ```
 
-### @mcpshield/cli
+### @kellyclaude/mcpshield
 ```json
 {
   "dependencies": {
-    "@mcpshield/core": "^0.1.0",
-    "@mcpshield/scanner": "^0.1.0",
+    "@kellyclaude/mcpshield-core": "^0.1.0",
+    "@kellyclaude/mcpshield-scanner": "^0.1.0",
     "commander": "^12.0.0",  // CLI framework
     "chalk": "^5.3.0",       // Terminal colors
     "ora": "^8.0.1",         // Spinners
@@ -115,11 +115,11 @@ mcpshield/
 }
 ```
 
-### @mcpshield/scanner
+### @kellyclaude/mcpshield-scanner
 ```json
 {
   "dependencies": {
-    "@mcpshield/core": "^0.1.0",
+    "@kellyclaude/mcpshield-core": "^0.1.0",
     "fast-levenshtein": "^3.0.0"  // String similarity (typosquat detection)
   }
 }
@@ -128,10 +128,10 @@ mcpshield/
 ## Dependency Graph
 
 ```
-@mcpshield/cli
-    ├── @mcpshield/core
-    └── @mcpshield/scanner
-            └── @mcpshield/core
+@kellyclaude/mcpshield
+    ├── @kellyclaude/mcpshield-core
+    └── @kellyclaude/mcpshield-scanner
+            └── @kellyclaude/mcpshield-core
 
 (cli depends on both core and scanner; scanner depends on core)
 ```
@@ -182,10 +182,10 @@ node packages/cli/dist/cli.js [command]
 
 **After npm publish** (future):
 ```bash
-npx @mcpshield/cli [command]
+npx @kellyclaude/mcpshield [command]
 
 # or install globally
-npm install -g @mcpshield/cli
+npm install -g @kellyclaude/mcpshield
 mcp-shield [command]
 ```
 

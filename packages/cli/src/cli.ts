@@ -6,7 +6,7 @@
 
 import { Command } from 'commander';
 import { createRequire } from 'module';
-import { RegistryClient } from '@mcpshield/core';
+import { RegistryClient } from '@kellyclaude/mcpshield-core';
 import { addCommand, initCommand, verifyCommand, scanCommand, cacheGcCommand, cachePurgeCommand, doctorCommand, lockValidateCommand } from './commands/index.js';
 import { setGlobalOptions, handleCommandError, debugLog } from './output.js';
 

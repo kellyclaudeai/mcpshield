@@ -8,7 +8,7 @@
  * - Risk scoring
  */
 
-import { Package, Finding, DependencyAnalysis, OSVClient } from '@mcpshield/core';
+import { Package, Finding, DependencyAnalysis, OSVClient } from '@kellyclaude/mcpshield-core';
 import { SecurityScanner, ScanResult } from './types.js';
 import { SCAN_RULES } from './rules.js';
 import * as tar from 'tar';

@@ -1,4 +1,4 @@
-# @mcpshield/core
+# @kellyclaude/mcpshield-core
 
 Core functionality for MCPShield, including:
 
@@ -9,7 +9,7 @@ Core functionality for MCPShield, including:
 ## Usage
 
 ```typescript
-import { RegistryClient, RegistryServerResponse } from '@mcpshield/core';
+import { RegistryClient, RegistryServerResponse } from '@kellyclaude/mcpshield-core';
 
 const client = new RegistryClient();
 

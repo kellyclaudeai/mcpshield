@@ -29,8 +29,8 @@ import {
   loadPolicy,
   validatePolicy,
   verifyNamespace,
-} from '@mcpshield/core';
-import { BasicScanner } from '@mcpshield/scanner';
+} from '@kellyclaude/mcpshield-core';
+import { BasicScanner } from '@kellyclaude/mcpshield-scanner';
 import {
   EXIT_GENERAL_FAILURE,
   EXIT_SUCCESS,

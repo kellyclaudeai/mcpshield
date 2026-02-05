@@ -16,7 +16,7 @@ import { initCommand } from '../../packages/cli/src/commands/init.js';
 import { scanCommand } from '../../packages/cli/src/commands/scan.js';
 import { setGlobalOptions } from '../../packages/cli/src/output.js';
 import { loadPolicy, validatePolicy } from '../../packages/core/src/policy.js';
-import { CacheManager, DigestVerifier } from '@mcpshield/core';
+import { CacheManager, DigestVerifier } from '@kellyclaude/mcpshield-core';
 import * as tar from 'tar';
 
 describe('Policy Enforcement E2E', () => {

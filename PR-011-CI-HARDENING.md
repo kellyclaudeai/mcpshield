@@ -31,7 +31,7 @@
 The following files have TypeScript compilation errors and are temporarily excluded from linting:
 1. `packages/cli/src/commands/cache.ts` - Missing methods in CacheManager
 2. `packages/cli/src/commands/lock-validate.ts` - Missing methods in LockfileManager  
-3. `packages/cli/src/commands/scan.ts` - Missing exports from @mcpshield/core
+3. `packages/cli/src/commands/scan.ts` - Missing exports from @kellyclaude/mcpshield-core
 
 ### Test Failures
 - Some core package tests are failing

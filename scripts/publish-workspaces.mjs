@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 
-const PUBLISH_ORDER = ['@mcpshield/core', '@mcpshield/scanner', '@mcpshield/cli'];
+const PUBLISH_ORDER = ['@kellyclaude/mcpshield-core', '@kellyclaude/mcpshield-scanner', '@kellyclaude/mcpshield'];
 
 function parseArgs(argv) {
   const parsed = {

@@ -196,7 +196,7 @@ npm link packages/cli
 mcp-shield --version</code></pre>
 
             <h3>Option 2: From npm (Coming Soon)</h3>
-            <pre><code>npm install -g @mcpshield/cli</code></pre>
+            <pre><code>npm install -g @kellyclaude/mcpshield</code></pre>
 
             <h2>Basic Usage</h2>
 
