@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCPShield Demo - Interactive Security Scanner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #0066ff;
+            --success: #28a745;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --text: #1a1a1a;
+            --text-light: #666;
+            --bg: #f8f9fa;
+            --border: #e1e4e8;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: var(--text-light);
+            margin-bottom: 30px;
+        }
+
+        .demo-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .panel h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .server-select {
+            margin-bottom: 30px;
+        }
+
+        .server-button {
+            display: block;
+            width: 100%;
+            padding: 15px 20px;
+            margin-bottom: 10px;
+            border: 2px solid var(--border);
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .server-button:hover {
+            border-color: var(--primary);
+            background: #f0f7ff;
+        }
+
+        .server-button.active {
+            border-color: var(--primary);
+            background: #e6f2ff;
+        }
+
+        .server-name {
+            font-weight: 600;
+            color: var(--text);
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .server-desc {
+            color: var(--text-light);
+            font-size: 13px;
+        }
+
+        .scan-result {
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .result-clean { background: #d4edda; border-left: 4px solid var(--success); }
+        .result-warning { background: #fff3cd; border-left: 4px solid var(--warning); }
+        .result-danger { background: #f8d7da; border-left: 4px solid var(--danger); }
+
+        .risk-score {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .score-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .score-clean { background: var(--success); }
+        .score-warning { background: var(--warning); }
+        .score-danger { background: var(--danger); }
+
+        .verdict {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .verdict-clean { color: var(--success); }
+        .verdict-warning { color: var(--warning); }
+        .verdict-danger { color: var(--danger); }
+
+        .findings {
+            margin-top: 20px;
+        }
+
+        .finding {
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            background: white;
+            border-left: 3px solid;
+        }
+
+        .finding-info { border-left-color: #17a2b8; }
+        .finding-warning { border-left-color: var(--warning); }
+        .finding-danger { border-left-color: var(--danger); }
+        .finding-success { border-left-color: var(--success); }
+
+        .finding-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .finding-desc {
+            color: var(--text-light);
+            font-size: 14px;
+        }
+
+        .lockfile-view {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+            line-height: 1.6;
+        }
+
+        .json-key { color: #9CDCFE; }
+        .json-string { color: #CE9178; }
+        .json-number { color: #B5CEA8; }
+        .json-boolean { color: #569CD6; }
+
+        .artifact-list {
+            margin-top: 15px;
+        }
+
+        .artifact {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+
+        .artifact-type {
+            display: inline-block;
+            padding: 3px 8px;
+            background: var(--primary);
+            color: white;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .artifact-url {
+            color: var(--text-light);
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .digest {
+            color: var(--success);
+            font-family: monospace;
+            font-size: 11px;
+            margin-top: 5px;
+        }
+
+        .btn-back {
+            display: inline-block;
+            padding: 10px 20px;
+            background: var(--primary);
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: background 0.3s;
+        }
+
+        .btn-back:hover {
+            background: #0052cc;
+        }
+
+        @media (max-width: 1024px) {
+            .demo-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="index.html" class="logo">🛡️ MCPShield</a>
+            <a href="index.html" class="btn-back">← Back to Home</a>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1>🔍 Interactive Security Demo</h1>
+        <p class="subtitle">Select an MCP server to see real-time security analysis and lockfile generation</p>
+
+        <div class="demo-grid">
+            <!-- Left Panel: Server Selection -->
+            <div class="panel">
+                <h2>📦 Select MCP Server</h2>
+                <div class="server-select" id="serverSelect">
+                    <button class="server-button active" data-server="filesystem">
+                        <span class="server-name">io.github.modelcontextprotocol/filesystem</span>
+                        <span class="server-desc">✅ Clean - Official MCP filesystem server</span>
+                    </button>
+                    <button class="server-button" data-server="suspicious">
+                        <span class="server-name">io.github.hacker42/free-gpt</span>
+                        <span class="server-desc">⚠️ Warning - Suspicious code patterns detected</span>
+                    </button>
+                    <button class="server-button" data-server="typosquat">
+                        <span class="server-name">io.github.user/filesysten</span>
+                        <span class="server-desc">🚨 Danger - Typosquat detected</span>
+                    </button>
+                    <button class="server-button" data-server="malicious">
+                        <span class="server-name">io.github.evil/data-exfiltrator</span>
+                        <span class="server-desc">🚨 Malicious - Multiple threats detected</span>
+                    </button>
+                </div>
+
+                <h2>📋 Lockfile Preview</h2>
+                <div class="lockfile-view" id="lockfileView"></div>
+
+                <h2 style="margin-top: 30px;">📦 Artifacts</h2>
+                <div class="artifact-list" id="artifactList"></div>
+            </div>
+
+            <!-- Right Panel: Security Scan Results -->
+            <div class="panel">
+                <h2>🔍 Security Scan Results</h2>
+                <div id="scanResults"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const servers = {
+            filesystem: {
+                name: "io.github.modelcontextprotocol/filesystem",
+                version: "1.0.0",
+                riskScore: 15,
+                verdict: "clean",
+                findings: [
+                    { type: "success", title: "✅ No typosquats detected", desc: "Package name is unique and not similar to popular packages" },
+                    { type: "success", title: "✅ Namespace verified", desc: "GitHub repository ownership confirmed" },
+                    { type: "success", title: "✅ Clean code patterns", desc: "No eval(), exec(), or suspicious network calls" },
+                    { type: "info", title: "ℹ️ Dependencies verified", desc: "All 12 dependencies scanned and approved" }
+                ],
+                artifacts: [
+                    { type: "npm", url: "https://registry.npmjs.org/@modelcontextprotocol/filesystem/-/filesystem-1.0.0.tgz", digest: "sha512-abc123def456...", size: 45678 }
+                ],
+                lockfile: {
+                    namespace: "io.github.modelcontextprotocol/filesystem",
+                    version: "1.0.0",
+                    verified: true,
+                    verificationMethod: "github",
+                    verifiedOwner: "modelcontextprotocol"
+                }
+            },
+            suspicious: {
+                name: "io.github.hacker42/free-gpt",
+                version: "0.5.2",
+                riskScore: 65,
+                verdict: "warning",
+                findings: [
+                    { type: "warning", title: "⚠️ Suspicious code patterns", desc: "Found eval() calls in src/core.js:45" },
+                    { type: "warning", title: "⚠️ Network calls detected", desc: "Connects to unverified endpoint: suspicious-domain.ru" },
+                    { type: "warning", title: "⚠️ Install script present", desc: "postinstall script executes code during installation" },
+                    { type: "success", title: "✅ No typosquats detected", desc: "Package name is unique" },
+                    { type: "info", title: "ℹ️ Namespace not verified", desc: "Unable to verify GitHub repository ownership" }
+                ],
+                artifacts: [
+                    { type: "npm", url: "https://registry.npmjs.org/free-gpt/-/free-gpt-0.5.2.tgz", digest: "sha512-xyz789abc123...", size: 128456 }
+                ],
+                lockfile: {
+                    namespace: "io.github.hacker42/free-gpt",
+                    version: "0.5.2",
+                    verified: false,
+                    verificationMethod: null,
+                    verifiedOwner: null
+                }
+            },
+            typosquat: {
+                name: "io.github.user/filesysten",
+                version: "1.0.1",
+                riskScore: 85,
+                verdict: "danger",
+                findings: [
+                    { type: "danger", title: "🚨 TYPOSQUAT DETECTED", desc: "Name 'filesysten' is similar to popular package 'filesystem' (edit distance: 1)" },
+                    { type: "danger", title: "🚨 Suspicious code patterns", desc: "Found obfuscated code in multiple files" },
+                    { type: "warning", title: "⚠️ Network calls", desc: "Connects to unknown endpoints during runtime" },
+                    { type: "warning", title: "⚠️ Namespace mismatch", desc: "Repository owner doesn't match namespace claim" }
+                ],
+                artifacts: [
+                    { type: "npm", url: "https://registry.npmjs.org/filesysten/-/filesysten-1.0.1.tgz", digest: "sha512-bad789def456...", size: 34567 }
+                ],
+                lockfile: {
+                    namespace: "io.github.user/filesysten",
+                    version: "1.0.1",
+                    verified: false,
+                    verificationMethod: null,
+                    verifiedOwner: null
+                }
+            },
+            malicious: {
+                name: "io.github.evil/data-exfiltrator",
+                version: "2.1.0",
+                riskScore: 95,
+                verdict: "danger",
+                findings: [
+                    { type: "danger", title: "🚨 MALICIOUS CODE DETECTED", desc: "Exfiltrates environment variables to remote server" },
+                    { type: "danger", title: "🚨 Hidden network calls", desc: "Connects to attacker-controlled domain: evil-c2.com" },
+                    { type: "danger", title: "🚨 eval() usage", desc: "Executes arbitrary code from remote source" },
+                    { type: "danger", title: "🚨 Filesystem access", desc: "Reads SSH keys and credentials from ~/.ssh/" },
+                    { type: "danger", title: "🚨 Namespace hijacking", desc: "Falsely claims official namespace" },
+                    { type: "warning", title: "⚠️ Obfuscated code", desc: "Heavy obfuscation detected in core modules" }
+                ],
+                artifacts: [
+                    { type: "npm", url: "https://registry.npmjs.org/data-exfiltrator/-/data-exfiltrator-2.1.0.tgz", digest: "sha512-malicious123...", size: 256789 }
+                ],
+                lockfile: {
+                    namespace: "io.github.evil/data-exfiltrator",
+                    version: "2.1.0",
+                    verified: false,
+                    verificationMethod: null,
+                    verifiedOwner: null
+                }
+            }
+        };
+
+        function renderScanResults(serverKey) {
+            const server = servers[serverKey];
+            const resultsDiv = document.getElementById('scanResults');
+            
+            let resultClass = 'result-clean';
+            let scoreClass = 'score-clean';
+            let verdictClass = 'verdict-clean';
+            
+            if (server.verdict === 'warning') {
+                resultClass = 'result-warning';
+                scoreClass = 'score-warning';
+                verdictClass = 'verdict-warning';
+            } else if (server.verdict === 'danger') {
+                resultClass = 'result-danger';
+                scoreClass = 'score-danger';
+                verdictClass = 'verdict-danger';
+            }
+
+            let verdictText = '✅ CLEAN';
+            if (server.verdict === 'warning') verdictText = '⚠️ WARNING';
+            if (server.verdict === 'danger') verdictText = '🚨 DANGER';
+
+            let html = `
+                <div class="scan-result ${resultClass}">
+                    <div class="risk-score">
+                        <div class="score-circle ${scoreClass}">${server.riskScore}</div>
+                        <div>
+                            <div class="verdict ${verdictClass}">${verdictText}</div>
+                            <div style="color: var(--text-light);">Risk Score: ${server.riskScore}/100</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="findings">
+                    <h3 style="margin-bottom: 15px;">Security Findings:</h3>
+            `;
+
+            server.findings.forEach(finding => {
+                html += `
+                    <div class="finding finding-${finding.type}">
+                        <div class="finding-title">${finding.title}</div>
+                        <div class="finding-desc">${finding.desc}</div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            resultsDiv.innerHTML = html;
+        }
+
+        function renderLockfile(serverKey) {
+            const server = servers[serverKey];
+            const lockfileDiv = document.getElementById('lockfileView');
+            
+            const lockfile = {
+                version: "1.0.0",
+                generatedAt: new Date().toISOString(),
+                servers: {
+                    [server.name]: server.lockfile
+                }
+            };
+
+            lockfileDiv.textContent = JSON.stringify(lockfile, null, 2);
+        }
+
+        function renderArtifacts(serverKey) {
+            const server = servers[serverKey];
+            const artifactDiv = document.getElementById('artifactList');
+            
+            let html = '';
+            server.artifacts.forEach(artifact => {
+                html += `
+                    <div class="artifact">
+                        <div class="artifact-type">${artifact.type.toUpperCase()}</div>
+                        <div class="artifact-url">${artifact.url}</div>
+                        <div class="digest">✓ ${artifact.digest}</div>
+                        <div style="color: var(--text-light); font-size: 12px; margin-top: 5px;">Size: ${(artifact.size / 1024).toFixed(1)} KB</div>
+                    </div>
+                `;
+            });
+            
+            artifactDiv.innerHTML = html;
+        }
+
+        function updateDemo(serverKey) {
+            renderScanResults(serverKey);
+            renderLockfile(serverKey);
+            renderArtifacts(serverKey);
+        }
+
+        // Event listeners
+        document.getElementById('serverSelect').addEventListener('click', (e) => {
+            const button = e.target.closest('.server-button');
+            if (!button) return;
+
+            // Update active state
+            document.querySelectorAll('.server-button').forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+
+            // Update demo
+            const serverKey = button.dataset.server;
+            updateDemo(serverKey);
+        });
+
+        // Initialize with first server
+        updateDemo('filesystem');
+    </script>
+</body>
+</html>

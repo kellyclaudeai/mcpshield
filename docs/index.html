@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Supply Chain Security for MCP Servers - Protect against typosquats, vulnerabilities, and malicious code">
+    <title>MCPShield - Supply Chain Security for MCP Servers</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #0066ff;
+            --primary-dark: #0052cc;
+            --secondary: #00d4ff;
+            --text: #1a1a1a;
+            --text-light: #666;
+            --bg: #ffffff;
+            --bg-light: #f8f9fa;
+            --border: #e1e4e8;
+            --success: #28a745;
+            --warning: #ffc107;
+            --danger: #dc3545;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background: var(--bg);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        header {
+            background: var(--bg);
+            border-bottom: 1px solid var(--border);
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .shield-icon {
+            font-size: 28px;
+        }
+
+        nav {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+
+        nav a {
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        nav a:hover {
+            color: var(--primary);
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 100px 0;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 52px;
+            margin-bottom: 20px;
+            font-weight: 800;
+        }
+
+        .hero p {
+            font-size: 24px;
+            margin-bottom: 40px;
+            opacity: 0.95;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 14px 32px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: white;
+            color: var(--primary);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Features Section */
+        .features {
+            padding: 80px 0;
+            background: var(--bg-light);
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 42px;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .section-subtitle {
+            text-align: center;
+            color: var(--text-light);
+            font-size: 20px;
+            margin-bottom: 60px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .feature-card h3 {
+            font-size: 24px;
+            margin-bottom: 15px;
+            color: var(--text);
+        }
+
+        .feature-card p {
+            color: var(--text-light);
+            line-height: 1.7;
+        }
+
+        /* Code Example Section */
+        .code-example {
+            padding: 80px 0;
+        }
+
+        .terminal {
+            background: #1e1e1e;
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 40px 0;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .terminal-header {
+            background: #323232;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .dot-red { background: #ff5f56; }
+        .dot-yellow { background: #ffbd2e; }
+        .dot-green { background: #27c93f; }
+
+        .terminal-body {
+            padding: 30px;
+            color: #d4d4d4;
+            font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .prompt { color: #4EC9B0; }
+        .command { color: #DCDCAA; }
+        .output { color: #9CDCFE; }
+        .success { color: #4EC9B0; }
+        .comment { color: #6A9955; }
+
+        /* Stats Section */
+        .stats {
+            background: var(--primary);
+            color: white;
+            padding: 60px 0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 48px;
+            font-weight: 800;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+
+        /* Security Threats Section */
+        .threats {
+            padding: 80px 0;
+            background: var(--bg-light);
+        }
+
+        .threats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .threat-card {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            border-left: 4px solid var(--danger);
+        }
+
+        .threat-card h4 {
+            color: var(--danger);
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 80px 0;
+            text-align: center;
+        }
+
+        .cta-section h2 {
+            font-size: 42px;
+            margin-bottom: 20px;
+        }
+
+        .cta-section p {
+            font-size: 20px;
+            margin-bottom: 40px;
+            opacity: 0.95;
+        }
+
+        /* Footer */
+        footer {
+            background: #1a1a1a;
+            color: white;
+            padding: 40px 0;
+            text-align: center;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: white;
+            text-decoration: none;
+            opacity: 0.8;
+            transition: opacity 0.3s;
+        }
+
+        .footer-links a:hover {
+            opacity: 1;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 36px;
+            }
+
+            .hero p {
+                font-size: 18px;
+            }
+
+            .section-title {
+                font-size: 32px;
+            }
+
+            nav {
+                display: none;
+            }
+
+            .features-grid,
+            .threats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="/" class="logo">
+                    <span class="shield-icon">🛡️</span>
+                    <span>MCPShield</span>
+                </a>
+                <nav>
+                    <a href="#features">Features</a>
+                    <a href="demo.html">Demo</a>
+                    <a href="quickstart.html">Quick Start</a>
+                    <a href="docs.html">Docs</a>
+                    <a href="https://github.com/yourusername/mcpshield" target="_blank">GitHub</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <h1>🛡️ Supply Chain Security for MCP Servers</h1>
+            <p>Protect your AI applications from typosquats, vulnerabilities, and malicious code</p>
+            <div class="cta-buttons">
+                <a href="quickstart.html" class="btn btn-primary">Get Started</a>
+                <a href="demo.html" class="btn btn-secondary">Try Demo</a>
+                <a href="https://github.com/yourusername/mcpshield" class="btn btn-secondary">View on GitHub</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="features" id="features">
+        <div class="container">
+            <h2 class="section-title">How MCPShield Protects You</h2>
+            <p class="section-subtitle">Comprehensive security for Model Context Protocol servers</p>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Lockfile Management</h3>
+                    <p>Track verified MCP servers in <code>mcp.lock.json</code> with cryptographic hashes. Know exactly what's running in your environment.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🔍</div>
+                    <h3>Security Scanning</h3>
+                    <p>Detect typosquats, suspicious code patterns, malicious dependencies, and known vulnerabilities before they reach production.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">✅</div>
+                    <h3>Artifact Verification</h3>
+                    <p>Verify npm packages, PyPI distributions, and Docker images with SHA-512 digests. Detect drift automatically.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">📋</div>
+                    <h3>Namespace Verification</h3>
+                    <p>Validate GitHub namespaces and repository ownership. Prevent namespace hijacking attacks.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Fast CLI</h3>
+                    <p>Simple commands: <code>init</code>, <code>add</code>, <code>verify</code>, <code>scan</code>. Integrates seamlessly into your workflow.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Policy Enforcement</h3>
+                    <p>Define security policies in <code>policy.yaml</code>. Block high-risk packages, enforce verification, and automate compliance.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="code-example">
+        <div class="container">
+            <h2 class="section-title">See It In Action</h2>
+            <p class="section-subtitle">Four simple commands to secure your MCP servers</p>
+
+            <div class="terminal">
+                <div class="terminal-header">
+                    <div class="terminal-dot dot-red"></div>
+                    <div class="terminal-dot dot-yellow"></div>
+                    <div class="terminal-dot dot-green"></div>
+                </div>
+                <div class="terminal-body">
+<span class="comment"># 1. Initialize MCPShield in your project</span>
+<span class="prompt">$</span> <span class="command">mcp-shield init</span>
+<span class="success">✓</span> Created mcp.lock.json
+<span class="success">✓</span> Created policy.yaml
+
+<span class="comment"># 2. Add an MCP server from the registry</span>
+<span class="prompt">$</span> <span class="command">mcp-shield add io.github.modelcontextprotocol/filesystem</span>
+<span class="output">Fetching server metadata...</span>
+<span class="output">Verifying namespace ownership...</span>
+<span class="output">Downloading artifacts...</span>
+<span class="output">Running security scan...</span>
+
+<span class="output">📊 Security Scan Results:</span>
+<span class="output">  Risk Score: 15/100 (clean)</span>
+<span class="output">  Verdict: ✅ CLEAN</span>
+<span class="output">  
+<span class="success">✓</span> No typosquats detected
+<span class="success">✓</span> No suspicious code patterns
+<span class="success">✓</span> Dependencies verified
+
+<span class="comment"># 3. Verify all locked servers</span>
+<span class="prompt">$</span> <span class="command">mcp-shield verify</span>
+<span class="success">✓</span> io.github.modelcontextprotocol/filesystem (verified)
+<span class="output">  Digest: sha512-abc123...</span>
+<span class="output">  Status: No drift detected</span>
+
+<span class="comment"># 4. Run comprehensive security scan</span>
+<span class="prompt">$</span> <span class="command">mcp-shield scan</span>
+<span class="output">Scanning 1 server(s)...</span>
+<span class="success">✓</span> All servers passed security checks
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="stats">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-number">100%</div>
+                    <div class="stat-label">Open Source</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">13/13</div>
+                    <div class="stat-label">Tests Passing</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">SHA-512</div>
+                    <div class="stat-label">Cryptographic Hashing</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">&lt; 1s</div>
+                    <div class="stat-label">Scan Time</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="threats">
+        <div class="container">
+            <h2 class="section-title">Threats We Protect Against</h2>
+            <p class="section-subtitle">Real supply chain attacks targeting AI systems</p>
+
+            <div class="threats-grid">
+                <div class="threat-card">
+                    <h4>🎯 Typosquatting</h4>
+                    <p>Malicious packages with similar names to popular MCP servers (e.g., <code>filesysten</code> vs <code>filesystem</code>)</p>
+                </div>
+
+                <div class="threat-card">
+                    <h4>🔓 Namespace Hijacking</h4>
+                    <p>Attackers claiming namespaces that look official but aren't verified</p>
+                </div>
+
+                <div class="threat-card">
+                    <h4>📦 Artifact Drift</h4>
+                    <p>Packages changing after initial approval, introducing malicious code</p>
+                </div>
+
+                <div class="threat-card">
+                    <h4>💀 Malicious Code</h4>
+                    <p>Hidden eval(), exec(), network calls, and suspicious install scripts</p>
+                </div>
+
+                <div class="threat-card">
+                    <h4>🕸️ Dependency Confusion</h4>
+                    <p>Malicious dependencies that masquerade as internal packages</p>
+                </div>
+
+                <div class="threat-card">
+                    <h4>🚨 Known Vulnerabilities</h4>
+                    <p>Outdated packages with publicly disclosed security issues</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta-section">
+        <div class="container">
+            <h2>Ready to Secure Your MCP Servers?</h2>
+            <p>Join developers protecting their AI applications from supply chain attacks</p>
+            <div class="cta-buttons">
+                <a href="quickstart.html" class="btn btn-primary">Get Started Now</a>
+                <a href="demo.html" class="btn btn-secondary">Try Interactive Demo</a>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="footer-links">
+                <a href="https://github.com/yourusername/mcpshield">GitHub</a>
+                <a href="quickstart.html">Quick Start</a>
+                <a href="docs.html">Documentation</a>
+                <a href="https://modelcontextprotocol.io/">MCP Protocol</a>
+                <a href="https://registry.modelcontextprotocol.io/">MCP Registry</a>
+            </div>
+            <p>&copy; 2026 MCPShield. MIT License. Built with ❤️ for the MCP community.</p>
+        </div>
+    </footer>
+</body>
+</html>

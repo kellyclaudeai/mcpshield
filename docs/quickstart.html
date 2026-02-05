@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Start - MCPShield</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #0066ff;
+            --text: #1a1a1a;
+            --text-light: #666;
+            --bg: #ffffff;
+            --bg-light: #f8f9fa;
+            --border: #e1e4e8;
+            --code-bg: #f6f8fa;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background: var(--bg-light);
+        }
+
+        header {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 20px;
+        }
+
+        .header-content {
+            max-width: 900px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .doc-content {
+            background: white;
+            padding: 50px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        h1 {
+            font-size: 42px;
+            margin-bottom: 20px;
+            color: var(--text);
+        }
+
+        h2 {
+            font-size: 32px;
+            margin: 40px 0 20px;
+            padding-top: 20px;
+            border-top: 2px solid var(--border);
+        }
+
+        h2:first-of-type {
+            border-top: none;
+            margin-top: 30px;
+        }
+
+        h3 {
+            font-size: 24px;
+            margin: 30px 0 15px;
+            color: var(--primary);
+        }
+
+        p {
+            margin-bottom: 15px;
+            line-height: 1.7;
+        }
+
+        code {
+            background: var(--code-bg);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 14px;
+        }
+
+        pre {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 20px 0;
+            line-height: 1.5;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+        }
+
+        ul, ol {
+            margin: 15px 0 15px 30px;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+
+        .btn-back {
+            display: inline-block;
+            padding: 10px 20px;
+            background: var(--primary);
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+        }
+
+        .note {
+            background: #e6f2ff;
+            border-left: 4px solid var(--primary);
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        @media (max-width: 768px) {
+            .doc-content {
+                padding: 30px 20px;
+            }
+
+            h1 {
+                font-size: 32px;
+            }
+
+            h2 {
+                font-size: 26px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="index.html" class="logo">🛡️ MCPShield</a>
+            <a href="index.html" class="btn-back">← Back to Home</a>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="doc-content">
+            <h1>🚀 Quick Start Guide</h1>
+            <p>Get MCPShield up and running in under 5 minutes</p>
+
+            <h2>Installation</h2>
+            
+            <h3>Option 1: From Source (Current)</h3>
+            <pre><code># Clone the repository
+git clone https://github.com/yourusername/mcpshield.git
+cd mcpshield
+
+# Install dependencies
+npm install
+
+# Build the project
+npm run build
+
+# Link CLI globally
+npm link packages/cli
+
+# Verify installation
+mcp-shield --version</code></pre>
+
+            <h3>Option 2: From npm (Coming Soon)</h3>
+            <pre><code>npm install -g @mcpshield/cli</code></pre>
+
+            <h2>Basic Usage</h2>
+
+            <h3>Step 1: Initialize MCPShield</h3>
+            <p>Navigate to your project directory and initialize MCPShield:</p>
+            <pre><code>cd ~/my-mcp-project
+mcp-shield init</code></pre>
+
+            <p>This creates two files:</p>
+            <ul>
+                <li><code>mcp.lock.json</code> - Lockfile tracking all verified servers</li>
+                <li><code>policy.yaml</code> - Security policy configuration</li>
+            </ul>
+
+            <h3>Step 2: Add an MCP Server</h3>
+            <p>Add a server from the MCP Registry:</p>
+            <pre><code>mcp-shield add io.github.modelcontextprotocol/filesystem</code></pre>
+
+            <p>MCPShield will:</p>
+            <ol>
+                <li>Fetch metadata from the MCP Registry</li>
+                <li>Verify namespace ownership (GitHub)</li>
+                <li>Download and verify artifacts (npm packages)</li>
+                <li>Run comprehensive security scan</li>
+                <li>Show results and prompt for approval</li>
+                <li>Add to <code>mcp.lock.json</code> if approved</li>
+            </ol>
+
+            <div class="note">
+                <strong>💡 Tip:</strong> Use <code>-y</code> or <code>--yes</code> to skip confirmation prompts:
+                <pre style="margin-top: 10px;"><code>mcp-shield add io.github.user/server-name --yes</code></pre>
+            </div>
+
+            <h3>Step 3: Verify Servers</h3>
+            <p>Re-verify all servers in your lockfile:</p>
+            <pre><code>mcp-shield verify</code></pre>
+
+            <p>This command:</p>
+            <ul>
+                <li>Downloads artifacts from cache or registry</li>
+                <li>Verifies SHA-512 digests match lockfile</li>
+                <li>Reports any drift detected</li>
+            </ul>
+
+            <h3>Step 4: Run Security Scan</h3>
+            <p>Scan all servers for security issues:</p>
+            <pre><code>mcp-shield scan</code></pre>
+
+            <p>The scanner checks for:</p>
+            <ul>
+                <li>Typosquatting attacks</li>
+                <li>Suspicious code patterns (eval, exec)</li>
+                <li>Malicious network calls</li>
+                <li>Dangerous dependencies</li>
+                <li>Install script exploits</li>
+            </ul>
+
+            <h2>Example Workflow</h2>
+
+            <pre><code># Initialize in your project
+cd ~/my-ai-app
+mcp-shield init
+
+# Add trusted servers
+mcp-shield add io.github.modelcontextprotocol/filesystem
+mcp-shield add io.github.modelcontextprotocol/brave-search
+
+# Verify everything is secure
+mcp-shield verify
+mcp-shield scan
+
+# Check lockfile
+cat mcp.lock.json</code></pre>
+
+            <h2>Understanding the Lockfile</h2>
+
+            <p>The <code>mcp.lock.json</code> file tracks all verified servers:</p>
+
+            <pre><code>{
+  "version": "1.0.0",
+  "generatedAt": "2026-02-05T15:30:00.000Z",
+  "servers": {
+    "io.github.modelcontextprotocol/filesystem": {
+      "namespace": "io.github.modelcontextprotocol/filesystem",
+      "version": "1.0.0",
+      "verified": true,
+      "verificationMethod": "github",
+      "verifiedOwner": "modelcontextprotocol",
+      "fetchedAt": "2026-02-05T15:30:00.000Z",
+      "artifacts": [
+        {
+          "type": "npm",
+          "url": "https://registry.npmjs.org/...",
+          "digest": "sha512-abc123...",
+          "size": 45678
+        }
+      ]
+    }
+  }
+}</code></pre>
+
+            <h2>Security Scan Output</h2>
+
+            <p>When you run <code>mcp-shield scan</code>, you'll see:</p>
+
+            <pre><code>📊 Security Scan Results:
+
+io.github.modelcontextprotocol/filesystem
+  Risk Score: 15/100 (clean)
+  Verdict: ✅ CLEAN
+  
+  ✓ No typosquats detected
+  ✓ No suspicious code patterns
+  ✓ Dependencies verified
+  ℹ️ 12 dependencies scanned
+
+io.github.suspicious/package
+  Risk Score: 75/100 (suspicious)
+  Verdict: ⚠️ WARNING
+  
+  ⚠️ eval() detected in src/core.js:45
+  ⚠️ Network call to unverified endpoint
+  ⚠️ Install script present
+
+Summary:
+  Total servers: 2
+  Clean: 1
+  Warnings: 1
+  Dangerous: 0</code></pre>
+
+            <h2>Policy Configuration</h2>
+
+            <p>The <code>policy.yaml</code> file lets you define security policies:</p>
+
+            <pre><code>version: 1.0.0
+
+policies:
+  # Block packages above this risk score
+  maxRiskScore: 50
+
+  # Require namespace verification
+  requireVerification: true
+
+  # Block known malicious patterns
+  blockPatterns:
+    - eval
+    - exec
+    - child_process
+
+  # Allowed registries
+  allowedRegistries:
+    - registry.npmjs.org
+    - pypi.org
+
+  # Auto-approve verified publishers
+  trustedPublishers:
+    - modelcontextprotocol</code></pre>
+
+            <div class="warning">
+                <strong>⚠️ Warning:</strong> Policy enforcement is planned for a future release. Currently, policies are advisory only.
+            </div>
+
+            <h2>Next Steps</h2>
+
+            <ul>
+                <li>Read the <a href="docs.html">full documentation</a></li>
+                <li>Try the <a href="demo.html">interactive demo</a></li>
+                <li>Explore <a href="https://github.com/yourusername/mcpshield/tree/main/examples">example configurations</a></li>
+                <li>Join the community on <a href="https://github.com/yourusername/mcpshield/discussions">GitHub Discussions</a></li>
+                <li>Report issues on <a href="https://github.com/yourusername/mcpshield/issues">GitHub Issues</a></li>
+            </ul>
+
+            <h2>Common Issues</h2>
+
+            <h3>Command not found: mcp-shield</h3>
+            <p>Make sure you've linked the CLI:</p>
+            <pre><code>cd /path/to/mcpshield
+npm link packages/cli</code></pre>
+
+            <h3>Cannot fetch server metadata</h3>
+            <p>Ensure the server exists in the MCP Registry:</p>
+            <pre><code>curl https://registry.modelcontextprotocol.io/servers/io.github.user/server-name</code></pre>
+
+            <h3>Verification failed</h3>
+            <p>The server may not have a valid GitHub repository. Check the namespace format and repository ownership.</p>
+
+            <h2>Need Help?</h2>
+
+            <p>If you run into issues:</p>
+            <ul>
+                <li>Check the <a href="docs.html">documentation</a></li>
+                <li>Search <a href="https://github.com/yourusername/mcpshield/issues">existing issues</a></li>
+                <li>Ask on <a href="https://github.com/yourusername/mcpshield/discussions">GitHub Discussions</a></li>
+                <li>Open a <a href="https://github.com/yourusername/mcpshield/issues/new">new issue</a></li>
+            </ul>
+
+        </div>
+    </div>
+</body>
+</html>
