@@ -1,0 +1,423 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcpshield.dev/schemas/v1/policy.yaml.json",
+  "title": "MCPShield Policy Configuration",
+  "description": "Security and access control policy for MCP servers",
+  "type": "object",
+  "required": ["version"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Policy schema version",
+      "const": "1.0",
+      "examples": ["1.0"]
+    },
+    "global": {
+      "$ref": "#/definitions/GlobalPolicy"
+    },
+    "servers": {
+      "type": "array",
+      "description": "Server-specific policy overrides",
+      "items": {
+        "$ref": "#/definitions/ServerPolicy"
+      }
+    }
+  },
+  "definitions": {
+    "GlobalPolicy": {
+      "type": "object",
+      "description": "Global security policies applying to all servers",
+      "properties": {
+        "allowNamespaces": {
+          "type": "array",
+          "description": "List of allowed namespaces (glob patterns supported)",
+          "items": {
+            "type": "string"
+          },
+          "examples": [["io.github.myorg/*", "com.example.*"]]
+        },
+        "denyNamespaces": {
+          "type": "array",
+          "description": "List of explicitly denied namespaces",
+          "items": {
+            "type": "string"
+          }
+        },
+        "requireVerification": {
+          "type": "boolean",
+          "description": "Require publisher identity verification",
+          "default": true
+        },
+        "denyUnverified": {
+          "type": "boolean",
+          "description": "Block servers without verified publishers",
+          "default": true
+        },
+        "requireApprovalFor": {
+          "type": "array",
+          "description": "Capabilities that require manual approval",
+          "items": {
+            "type": "string",
+            "enum": ["filesystem", "network", "secrets", "database", "system-commands"]
+          },
+          "examples": [["filesystem", "network"]]
+        },
+        "maxRiskScore": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Maximum acceptable risk score (0-100)",
+          "default": 50
+        },
+        "blockSeverities": {
+          "type": "array",
+          "description": "Security finding severities that block execution",
+          "items": {
+            "type": "string",
+            "enum": ["critical", "high", "medium", "low", "info"]
+          },
+          "default": ["critical"]
+        },
+        "rateLimit": {
+          "$ref": "#/definitions/RateLimitPolicy"
+        },
+        "audit": {
+          "$ref": "#/definitions/AuditPolicy"
+        }
+      }
+    },
+    "ServerPolicy": {
+      "type": "object",
+      "required": ["serverName"],
+      "properties": {
+        "serverName": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9.-]+/[a-zA-Z0-9._-]+$",
+          "description": "Server name (supports wildcards: io.github.user/*)"
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether this server is allowed to run",
+          "default": true
+        },
+        "tools": {
+          "type": "array",
+          "description": "Tool-level access control",
+          "items": {
+            "$ref": "#/definitions/ToolPolicy"
+          }
+        },
+        "resources": {
+          "type": "array",
+          "description": "Resource-level access control",
+          "items": {
+            "$ref": "#/definitions/ResourcePolicy"
+          }
+        },
+        "capabilities": {
+          "$ref": "#/definitions/CapabilityPolicy"
+        },
+        "rateLimit": {
+          "$ref": "#/definitions/RateLimitPolicy"
+        }
+      }
+    },
+    "ToolPolicy": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Tool name (supports wildcards: search*)",
+          "examples": ["search", "fetch_*"]
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether this tool is allowed",
+          "default": true
+        },
+        "requireApproval": {
+          "type": "boolean",
+          "description": "Require user approval before each invocation",
+          "default": false
+        },
+        "maxCallsPerMinute": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Rate limit for this tool"
+        },
+        "argumentConstraints": {
+          "type": "array",
+          "description": "Constraints on tool arguments",
+          "items": {
+            "type": "object",
+            "required": ["argument"],
+            "properties": {
+              "argument": {
+                "type": "string",
+                "description": "Argument name"
+              },
+              "allowedValues": {
+                "type": "array",
+                "description": "Whitelist of allowed values",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "deniedValues": {
+                "type": "array",
+                "description": "Blacklist of denied values",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "pattern": {
+                "type": "string",
+                "format": "regex",
+                "description": "Regex pattern that values must match"
+              },
+              "maxLength": {
+                "type": "integer",
+                "description": "Maximum string length"
+              }
+            }
+          }
+        }
+      }
+    },
+    "ResourcePolicy": {
+      "type": "object",
+      "required": ["uri"],
+      "properties": {
+        "uri": {
+          "type": "string",
+          "description": "Resource URI pattern (supports wildcards)",
+          "examples": ["file:///*", "https://*.example.com/*"]
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "requireApproval": {
+          "type": "boolean",
+          "default": false
+        },
+        "readOnly": {
+          "type": "boolean",
+          "description": "Allow only read operations",
+          "default": false
+        }
+      }
+    },
+    "CapabilityPolicy": {
+      "type": "object",
+      "description": "Capability boundaries for server execution",
+      "properties": {
+        "filesystem": {
+          "type": "object",
+          "properties": {
+            "allowedPaths": {
+              "type": "array",
+              "description": "Allowed filesystem paths (absolute or relative)",
+              "items": {
+                "type": "string"
+              },
+              "examples": [["/home/user/data", "./workspace"]]
+            },
+            "deniedPaths": {
+              "type": "array",
+              "description": "Explicitly denied paths",
+              "items": {
+                "type": "string"
+              },
+              "examples": [["/etc", "/root", "~/.ssh"]]
+            },
+            "readOnly": {
+              "type": "boolean",
+              "description": "Restrict to read-only access",
+              "default": false
+            }
+          }
+        },
+        "network": {
+          "type": "object",
+          "properties": {
+            "allowedDomains": {
+              "type": "array",
+              "description": "Allowed domains for network access (glob patterns supported)",
+              "items": {
+                "type": "string"
+              },
+              "examples": [["*.brave.com", "api.openai.com"]]
+            },
+            "deniedDomains": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "allowedPorts": {
+              "type": "array",
+              "description": "Allowed port numbers",
+              "items": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 65535
+              }
+            },
+            "requireTls": {
+              "type": "boolean",
+              "description": "Require TLS/HTTPS for all network connections",
+              "default": true
+            }
+          }
+        },
+        "secrets": {
+          "type": "object",
+          "properties": {
+            "allowedEnvVars": {
+              "type": "array",
+              "description": "Environment variables the server is allowed to access",
+              "items": {
+                "type": "string"
+              },
+              "examples": [["BRAVE_API_KEY", "OPENAI_API_KEY"]]
+            },
+            "denyEnvVarPatterns": {
+              "type": "array",
+              "description": "Patterns of env vars to block (e.g., AWS_*, SSH_*)",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "execution": {
+          "type": "object",
+          "properties": {
+            "maxMemoryMB": {
+              "type": "integer",
+              "description": "Maximum memory usage in MB",
+              "minimum": 1
+            },
+            "maxCpuPercent": {
+              "type": "integer",
+              "description": "Maximum CPU usage percentage",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "timeout": {
+              "type": "integer",
+              "description": "Maximum execution time in seconds",
+              "minimum": 1
+            }
+          }
+        },
+        "budget": {
+          "type": "object",
+          "description": "Cost/usage budgets for API-driven servers",
+          "properties": {
+            "maxApiCallsPerDay": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "maxCostPerDay": {
+              "type": "number",
+              "description": "Maximum daily cost in USD",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "RateLimitPolicy": {
+      "type": "object",
+      "description": "Rate limiting configuration",
+      "properties": {
+        "maxCallsPerMinute": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum calls per minute across all tools"
+        },
+        "maxCallsPerHour": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "maxCallsPerDay": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "burstSize": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum burst of requests allowed"
+        }
+      }
+    },
+    "AuditPolicy": {
+      "type": "object",
+      "description": "Audit logging configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "logLevel": {
+          "type": "string",
+          "enum": ["all", "tools-only", "approvals-only", "errors-only"],
+          "default": "all"
+        },
+        "logToolCalls": {
+          "type": "boolean",
+          "description": "Log all tool invocations",
+          "default": true
+        },
+        "logArguments": {
+          "type": "boolean",
+          "description": "Include tool arguments in logs",
+          "default": true
+        },
+        "redactSecrets": {
+          "type": "boolean",
+          "description": "Redact secret values from logs",
+          "default": true
+        },
+        "retention": {
+          "type": "object",
+          "properties": {
+            "days": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Number of days to retain audit logs"
+            },
+            "maxSizeMB": {
+              "type": "integer",
+              "description": "Maximum total size of audit logs in MB"
+            }
+          }
+        },
+        "export": {
+          "type": "object",
+          "description": "External audit log export configuration",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            },
+            "format": {
+              "type": "string",
+              "enum": ["json", "cef", "syslog"],
+              "description": "Export format for SIEM integration"
+            },
+            "destination": {
+              "type": "string",
+              "format": "uri",
+              "description": "Destination for audit log export"
+            }
+          }
+        }
+      }
+    }
+  }
+}

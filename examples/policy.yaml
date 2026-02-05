@@ -1,0 +1,204 @@
+# MCPShield Policy Configuration Example
+# This file defines security and access control policies for MCP servers
+
+version: "1.0"
+
+global:
+  # Only allow servers from trusted namespaces
+  allowNamespaces:
+    - "io.github.modelcontextprotocol/*"  # Official MCP servers
+    - "io.github.myorg/*"                 # My organization's servers
+    - "com.example.*"                      # Custom domain servers
+  
+  # Explicitly deny suspicious namespaces
+  denyNamespaces:
+    - "io.github.suspicious-user/*"
+  
+  # Require publisher verification
+  requireVerification: true
+  denyUnverified: true
+  
+  # Capabilities that need manual approval
+  requireApprovalFor:
+    - filesystem
+    - network
+    - system-commands
+  
+  # Maximum acceptable risk score (0-100)
+  maxRiskScore: 50
+  
+  # Block execution if these severities are found
+  blockSeverities:
+    - critical
+    - high
+  
+  # Global rate limiting
+  rateLimit:
+    maxCallsPerMinute: 100
+    maxCallsPerHour: 1000
+    burstSize: 20
+  
+  # Audit logging
+  audit:
+    enabled: true
+    logLevel: all
+    logToolCalls: true
+    logArguments: true
+    redactSecrets: true
+    retention:
+      days: 90
+      maxSizeMB: 1024
+    export:
+      enabled: false
+      format: json
+      destination: "https://siem.example.com/logs"
+
+# Server-specific policy overrides
+servers:
+  # Brave Search server - trusted, minimal restrictions
+  - serverName: "io.github.modelcontextprotocol/brave-search"
+    enabled: true
+    tools:
+      - name: "search"
+        enabled: true
+        requireApproval: false
+        maxCallsPerMinute: 30
+        argumentConstraints:
+          - argument: "query"
+            maxLength: 500
+    capabilities:
+      network:
+        allowedDomains:
+          - "*.brave.com"
+          - "api.search.brave.com"
+        requireTls: true
+      secrets:
+        allowedEnvVars:
+          - "BRAVE_API_KEY"
+    rateLimit:
+      maxCallsPerMinute: 30
+      maxCallsPerDay: 1000
+
+  # Airtable server - data access, needs more control
+  - serverName: "io.github.domdomegg/airtable-mcp-server"
+    enabled: true
+    tools:
+      - name: "list_bases"
+        enabled: true
+        requireApproval: false
+      - name: "list_tables"
+        enabled: true
+        requireApproval: false
+      - name: "get_records"
+        enabled: true
+        requireApproval: false
+        maxCallsPerMinute: 10
+      - name: "create_records"
+        enabled: true
+        requireApproval: true  # Write operations need approval
+      - name: "update_records"
+        enabled: true
+        requireApproval: true
+      - name: "delete_records"
+        enabled: true
+        requireApproval: true
+    capabilities:
+      network:
+        allowedDomains:
+          - "*.airtable.com"
+        requireTls: true
+      secrets:
+        allowedEnvVars:
+          - "AIRTABLE_API_KEY"
+      budget:
+        maxApiCallsPerDay: 500
+        maxCostPerDay: 5.0
+
+  # Filesystem server - highly restricted
+  - serverName: "io.github.*/filesystem"
+    enabled: true
+    tools:
+      - name: "read_file"
+        enabled: true
+        requireApproval: false
+        argumentConstraints:
+          - argument: "path"
+            pattern: "^/home/user/workspace/.*"  # Only workspace
+      - name: "write_file"
+        enabled: true
+        requireApproval: true  # Always approve writes
+      - name: "delete_file"
+        enabled: false  # Deletion disabled
+    capabilities:
+      filesystem:
+        allowedPaths:
+          - "/home/user/workspace"
+          - "./project"
+        deniedPaths:
+          - "/etc"
+          - "/root"
+          - "~/.ssh"
+          - "~/.aws"
+        readOnly: false
+    rateLimit:
+      maxCallsPerMinute: 60
+
+  # Database server - strict access control
+  - serverName: "com.example.internal/database"
+    enabled: true
+    tools:
+      - name: "query"
+        enabled: true
+        requireApproval: false
+        maxCallsPerMinute: 20
+        argumentConstraints:
+          - argument: "sql"
+            pattern: "^SELECT.*"  # Only SELECT queries
+            maxLength: 1000
+      - name: "execute"
+        enabled: false  # Write operations disabled
+    capabilities:
+      network:
+        allowedDomains:
+          - "db.internal.example.com"
+        allowedPorts:
+          - 5432
+          - 3306
+        requireTls: true
+      secrets:
+        allowedEnvVars:
+          - "DB_HOST"
+          - "DB_USER"
+          - "DB_PASSWORD"
+        denyEnvVarPatterns:
+          - "AWS_*"
+          - "SSH_*"
+      execution:
+        maxMemoryMB: 512
+        maxCpuPercent: 50
+        timeout: 30
+
+  # Experimental/untrusted server - maximum restrictions
+  - serverName: "io.github.random-user/*"
+    enabled: true
+    tools:
+      - name: "*"  # All tools
+        enabled: true
+        requireApproval: true  # Approve everything
+        maxCallsPerMinute: 5
+    capabilities:
+      filesystem:
+        allowedPaths:
+          - "/tmp/mcp-sandbox"
+        readOnly: true
+      network:
+        allowedDomains: []  # No network access
+      secrets:
+        allowedEnvVars: []  # No secret access
+      execution:
+        maxMemoryMB: 256
+        maxCpuPercent: 25
+        timeout: 10
+    rateLimit:
+      maxCallsPerMinute: 5
+      maxCallsPerDay: 100

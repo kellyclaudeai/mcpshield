@@ -1,0 +1,228 @@
+{
+  "version": "1.0",
+  "generatedAt": "2026-02-04T22:30:00Z",
+  "generatedBy": {
+    "tool": "mcp-shield@1.0.0",
+    "user": "alice@example.com"
+  },
+  "servers": [
+    {
+      "name": "io.github.modelcontextprotocol/brave-search",
+      "version": "1.2.3",
+      "description": "Search the web using Brave Search API",
+      "source": {
+        "type": "registry",
+        "registry": "https://registry.modelcontextprotocol.io"
+      },
+      "repository": {
+        "url": "https://github.com/modelcontextprotocol/servers",
+        "source": "github",
+        "id": "r_kgDOLuNtKg"
+      },
+      "publisherIdentity": {
+        "namespace": "io.github.modelcontextprotocol",
+        "verificationMethod": "github",
+        "verifiedAt": "2026-02-04T22:15:00Z"
+      },
+      "packages": [
+        {
+          "registryType": "npm",
+          "identifier": "@modelcontextprotocol/server-brave-search",
+          "version": "1.2.3",
+          "artifactDigest": "sha256:fe333e598595000ae021bd27117db32ec69af6987f507ba7a63c90638ff633ce",
+          "registryBaseUrl": "https://registry.npmjs.org",
+          "runtimeHint": "npx",
+          "transport": {
+            "type": "stdio"
+          },
+          "environmentVariables": [
+            {
+              "name": "BRAVE_API_KEY",
+              "description": "API key for Brave Search",
+              "isRequired": true,
+              "isSecret": true
+            }
+          ]
+        }
+      ],
+      "security": {
+        "scanVersion": "1.0.0",
+        "scannedAt": "2026-02-04T22:15:00Z",
+        "verdict": "clean",
+        "riskScore": 15,
+        "findings": [
+          {
+            "severity": "low",
+            "category": "network-egress",
+            "message": "Server makes network requests to brave.com",
+            "details": {
+              "domains": ["api.search.brave.com"]
+            }
+          }
+        ],
+        "dependencies": {
+          "total": 42,
+          "direct": 5,
+          "vulnerabilities": {
+            "critical": 0,
+            "high": 0,
+            "medium": 0,
+            "low": 0
+          }
+        }
+      },
+      "approvedBy": "alice@example.com",
+      "approvedAt": "2026-02-04T22:30:00Z",
+      "notes": "Official MCP server, safe for general use"
+    },
+    {
+      "name": "io.github.domdomegg/airtable-mcp-server",
+      "version": "1.7.3",
+      "description": "Read and write access to Airtable database schemas, tables, and records",
+      "source": {
+        "type": "registry",
+        "registry": "https://registry.modelcontextprotocol.io"
+      },
+      "repository": {
+        "url": "https://github.com/domdomegg/airtable-mcp-server",
+        "source": "github",
+        "id": "R_kgDOMXx1Ow"
+      },
+      "publisherIdentity": {
+        "namespace": "io.github.domdomegg",
+        "verificationMethod": "github",
+        "verifiedAt": "2026-02-04T22:15:00Z"
+      },
+      "packages": [
+        {
+          "registryType": "npm",
+          "identifier": "airtable-mcp-server",
+          "version": "1.7.3",
+          "artifactDigest": "sha256:8220de07a08ebe908f04da139ea03dbfe29758141347e945da60535fb7bcca20",
+          "runtimeHint": "npx",
+          "transport": {
+            "type": "stdio"
+          },
+          "environmentVariables": [
+            {
+              "name": "AIRTABLE_API_KEY",
+              "description": "Airtable personal access token (e.g., pat123.abc123)",
+              "isRequired": true,
+              "isSecret": true
+            }
+          ]
+        },
+        {
+          "registryType": "oci",
+          "identifier": "docker.io/domdomegg/airtable-mcp-server:1.7.3",
+          "artifactDigest": "sha256:0f28a9129cfebd262dfb77854c872355d21401bb3e056575b3027081f5d570ca",
+          "runtimeHint": "docker",
+          "transport": {
+            "type": "stdio"
+          },
+          "environmentVariables": [
+            {
+              "name": "AIRTABLE_API_KEY",
+              "description": "Airtable personal access token",
+              "isRequired": true,
+              "isSecret": true
+            }
+          ]
+        }
+      ],
+      "security": {
+        "scanVersion": "1.0.0",
+        "scannedAt": "2026-02-04T22:20:00Z",
+        "verdict": "clean",
+        "riskScore": 25,
+        "findings": [
+          {
+            "severity": "medium",
+            "category": "network-egress",
+            "message": "Server makes network requests to external API",
+            "details": {
+              "domains": ["api.airtable.com"]
+            }
+          },
+          {
+            "severity": "info",
+            "category": "credential-access",
+            "message": "Requires API key for authentication",
+            "details": {
+              "envVar": "AIRTABLE_API_KEY"
+            }
+          }
+        ],
+        "dependencies": {
+          "total": 38,
+          "direct": 4,
+          "vulnerabilities": {
+            "critical": 0,
+            "high": 0,
+            "medium": 0,
+            "low": 0
+          }
+        },
+        "cloudAttestation": {
+          "signature": "MCPShield-Cloud-v1:abc123def456...",
+          "attestedAt": "2026-02-04T22:20:00Z",
+          "verificationUrl": "https://mcpshield.dev/attestation/abc123"
+        }
+      },
+      "approvedBy": "alice@example.com",
+      "approvedAt": "2026-02-04T22:30:00Z",
+      "notes": "Vetted community server with cloud attestation"
+    },
+    {
+      "name": "com.example.internal/custom-server",
+      "version": "0.1.0",
+      "description": "Internal custom MCP server for company workflows",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/example-corp/internal-mcp-servers",
+        "commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+      },
+      "repository": {
+        "url": "https://github.com/example-corp/internal-mcp-servers",
+        "source": "github"
+      },
+      "publisherIdentity": {
+        "namespace": "com.example",
+        "verificationMethod": "dns",
+        "verifiedAt": "2026-02-04T21:00:00Z"
+      },
+      "packages": [
+        {
+          "registryType": "npm",
+          "identifier": "@example-corp/custom-mcp-server",
+          "version": "0.1.0",
+          "artifactDigest": "sha256:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+          "runtimeHint": "npx",
+          "transport": {
+            "type": "stdio"
+          }
+        }
+      ],
+      "security": {
+        "scanVersion": "1.0.0",
+        "scannedAt": "2026-02-04T21:30:00Z",
+        "verdict": "clean",
+        "riskScore": 10,
+        "findings": [],
+        "dependencies": {
+          "total": 15,
+          "direct": 3,
+          "vulnerabilities": {
+            "critical": 0,
+            "high": 0,
+            "medium": 0,
+            "low": 0
+          }
+        }
+      },
+      "approvedBy": "security-team@example.com",
+      "approvedAt": "2026-02-04T22:00:00Z",
+      "notes": "Internal server, pre-approved by security team"
+    }
+  ]
+}

@@ -1,0 +1,334 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcpshield.dev/schemas/v1/mcp.lock.json",
+  "title": "MCPShield Lock File",
+  "description": "Lock file for pinning MCP server versions, artifacts, and security metadata",
+  "type": "object",
+  "required": ["version", "servers"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Lock file schema version",
+      "const": "1.0",
+      "examples": ["1.0"]
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when this lockfile was generated"
+    },
+    "generatedBy": {
+      "type": "object",
+      "description": "Tool and user who generated this lockfile",
+      "properties": {
+        "tool": {
+          "type": "string",
+          "description": "Tool name and version",
+          "examples": ["mcp-shield@1.0.0"]
+        },
+        "user": {
+          "type": "string",
+          "description": "Username or identifier of who approved the servers"
+        }
+      }
+    },
+    "servers": {
+      "type": "array",
+      "description": "List of approved MCP servers with pinned versions and security metadata",
+      "items": {
+        "$ref": "#/definitions/LockedServer"
+      }
+    }
+  },
+  "definitions": {
+    "LockedServer": {
+      "type": "object",
+      "required": ["name", "version", "source", "packages"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9.-]+/[a-zA-Z0-9._-]+$",
+          "description": "Server name in reverse-DNS format (e.g., io.github.user/server)",
+          "examples": ["io.github.modelcontextprotocol/brave-search"]
+        },
+        "version": {
+          "type": "string",
+          "description": "Exact server version from registry",
+          "examples": ["1.2.3"]
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of server functionality"
+        },
+        "source": {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["registry", "git", "url"],
+              "description": "Source type for the server"
+            },
+            "registry": {
+              "type": "string",
+              "format": "uri",
+              "description": "Registry URL (for type=registry)",
+              "examples": ["https://registry.modelcontextprotocol.io"]
+            },
+            "url": {
+              "type": "string",
+              "format": "uri",
+              "description": "Direct URL (for type=url or git)"
+            },
+            "commit": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{40}$",
+              "description": "Git commit SHA (for type=git)"
+            }
+          }
+        },
+        "repository": {
+          "type": "object",
+          "description": "Source code repository information",
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri",
+              "description": "Repository URL"
+            },
+            "source": {
+              "type": "string",
+              "description": "Repository hosting service",
+              "examples": ["github", "gitlab"]
+            },
+            "id": {
+              "type": "string",
+              "description": "Repository ID from hosting service"
+            }
+          }
+        },
+        "publisherIdentity": {
+          "type": "object",
+          "description": "Verified publisher identity information",
+          "properties": {
+            "namespace": {
+              "type": "string",
+              "description": "Verified namespace (e.g., io.github.username)",
+              "examples": ["io.github.modelcontextprotocol"]
+            },
+            "verificationMethod": {
+              "type": "string",
+              "enum": ["github", "dns", "http"],
+              "description": "How publisher identity was verified"
+            },
+            "verifiedAt": {
+              "type": "string",
+              "format": "date-time",
+              "description": "When verification was performed"
+            }
+          }
+        },
+        "packages": {
+          "type": "array",
+          "description": "Package artifacts for this server",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/LockedPackage"
+          }
+        },
+        "security": {
+          "$ref": "#/definitions/SecurityMetadata"
+        },
+        "approvedBy": {
+          "type": "string",
+          "description": "Who approved this server"
+        },
+        "approvedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When this server was approved"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Free-form notes about this server"
+        }
+      }
+    },
+    "LockedPackage": {
+      "type": "object",
+      "required": ["registryType", "identifier", "version", "artifactDigest"],
+      "properties": {
+        "registryType": {
+          "type": "string",
+          "enum": ["npm", "pypi", "oci", "nuget", "mcpb"],
+          "description": "Package registry type"
+        },
+        "identifier": {
+          "type": "string",
+          "description": "Package identifier (name or URL)",
+          "examples": ["@modelcontextprotocol/server-brave-search", "docker.io/user/image:tag"]
+        },
+        "version": {
+          "type": "string",
+          "description": "Exact package version",
+          "examples": ["1.2.3"]
+        },
+        "artifactDigest": {
+          "type": "string",
+          "pattern": "^(sha256|sha512):[a-f0-9]{64,128}$",
+          "description": "Cryptographic hash of the artifact",
+          "examples": ["sha256:abc123def456..."]
+        },
+        "registryBaseUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "Base URL of the package registry"
+        },
+        "runtimeHint": {
+          "type": "string",
+          "description": "Runtime hint for execution",
+          "examples": ["npx", "uvx", "docker", "dnx"]
+        },
+        "transport": {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["stdio", "sse", "streamable-http"]
+            }
+          }
+        },
+        "environmentVariables": {
+          "type": "array",
+          "description": "Required environment variables",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Environment variable name"
+              },
+              "description": {
+                "type": "string",
+                "description": "Human-readable description"
+              },
+              "isRequired": {
+                "type": "boolean",
+                "default": false
+              },
+              "isSecret": {
+                "type": "boolean",
+                "default": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "SecurityMetadata": {
+      "type": "object",
+      "description": "Security scan results and metadata",
+      "properties": {
+        "scanVersion": {
+          "type": "string",
+          "description": "Version of security scanning performed",
+          "examples": ["1.0.0"]
+        },
+        "scannedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When security scanning was performed"
+        },
+        "verdict": {
+          "type": "string",
+          "enum": ["clean", "warning", "suspicious", "malicious", "unknown"],
+          "description": "Overall security verdict"
+        },
+        "riskScore": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Risk score (0=safe, 100=critical)"
+        },
+        "findings": {
+          "type": "array",
+          "description": "Security findings from scanning",
+          "items": {
+            "type": "object",
+            "required": ["severity", "category", "message"],
+            "properties": {
+              "severity": {
+                "type": "string",
+                "enum": ["info", "low", "medium", "high", "critical"]
+              },
+              "category": {
+                "type": "string",
+                "enum": ["vulnerability", "typosquat", "suspicious-code", "config-risk", "network-egress", "credential-access"],
+                "description": "Type of security finding"
+              },
+              "message": {
+                "type": "string",
+                "description": "Human-readable description of the finding"
+              },
+              "cve": {
+                "type": "string",
+                "pattern": "^CVE-\\d{4}-\\d+$",
+                "description": "CVE identifier if applicable"
+              },
+              "details": {
+                "type": "object",
+                "description": "Additional context about the finding"
+              }
+            }
+          }
+        },
+        "dependencies": {
+          "type": "object",
+          "description": "Dependency analysis results",
+          "properties": {
+            "total": {
+              "type": "integer",
+              "description": "Total number of dependencies"
+            },
+            "direct": {
+              "type": "integer",
+              "description": "Number of direct dependencies"
+            },
+            "vulnerabilities": {
+              "type": "object",
+              "properties": {
+                "critical": { "type": "integer" },
+                "high": { "type": "integer" },
+                "medium": { "type": "integer" },
+                "low": { "type": "integer" }
+              }
+            }
+          }
+        },
+        "cloudAttestation": {
+          "type": "object",
+          "description": "Cloud verification attestation (MCPShield Cloud)",
+          "properties": {
+            "signature": {
+              "type": "string",
+              "description": "Digital signature from MCPShield Cloud"
+            },
+            "attestedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "verificationUrl": {
+              "type": "string",
+              "format": "uri",
+              "description": "URL to view full attestation details"
+            }
+          }
+        }
+      }
+    }
+  }
+}

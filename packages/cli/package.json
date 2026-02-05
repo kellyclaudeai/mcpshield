@@ -1,0 +1,30 @@
+{
+  "name": "@mcpshield/cli",
+  "version": "0.1.0",
+  "description": "Command-line interface for MCPShield",
+  "type": "module",
+  "bin": {
+    "mcp-shield": "./dist/cli.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "test": "node --import tsx --test test/**/*.test.ts",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@mcpshield/core": "^0.1.0",
+    "@mcpshield/scanner": "^0.1.0",
+    "commander": "^12.0.0",
+    "chalk": "^5.3.0",
+    "ora": "^8.0.1",
+    "prompts": "^2.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/prompts": "^2.4.9",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}
