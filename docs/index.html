@@ -5,7 +5,563 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Supply Chain Security for MCP Servers - Protect against typosquats, vulnerabilities, and malicious code">
     <title>MCPShield - Supply Chain Security for MCP Servers</title>
-    <link rel="stylesheet" href="tailwind.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --terminal-green: #00ff41;
+            --terminal-red: #ff0040;
+            --terminal-yellow: #ffdd00;
+            --terminal-cyan: #00ffff;
+            --bg-dark: #0a0e14;
+            --bg-darker: #050810;
+            --border: #1a2332;
+            --text: #c5d4dd;
+            --text-dim: #768390;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-dark);
+            color: var(--text);
+            line-height: 1.6;
+            font-size: 14px;
+            overflow-x: hidden;
+        }
+
+        /* Scan line effect */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 65, 0.02) 0px,
+                transparent 2px,
+                transparent 4px
+            );
+            pointer-events: none;
+            z-index: 9999;
+            animation: scanline 8s linear infinite;
+        }
+
+        @keyframes scanline {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(50px); }
+        }
+
+        /* Header */
+        header {
+            border-bottom: 2px solid var(--terminal-green);
+            background: var(--bg-darker);
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 40px;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Space Mono', monospace;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--terminal-green);
+            text-decoration: none;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo::before {
+            content: '[';
+            color: var(--terminal-cyan);
+        }
+
+        .logo::after {
+            content: ']';
+            color: var(--terminal-cyan);
+        }
+
+        .shield-icon {
+            filter: drop-shadow(0 0 8px var(--terminal-green));
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        nav {
+            display: flex;
+            gap: 30px;
+        }
+
+        nav a {
+            color: var(--text);
+            text-decoration: none;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 1px;
+            position: relative;
+            transition: color 0.3s;
+        }
+
+        nav a::before {
+            content: '>';
+            position: absolute;
+            left: -15px;
+            opacity: 0;
+            color: var(--terminal-green);
+            transition: opacity 0.3s, left 0.3s;
+        }
+
+        nav a:hover {
+            color: var(--terminal-green);
+        }
+
+        nav a:hover::before {
+            opacity: 1;
+            left: -18px;
+        }
+
+        /* Hero */
+        .hero {
+            padding: 100px 0;
+            background:
+                linear-gradient(135deg, var(--bg-darker) 0%, var(--bg-dark) 100%),
+                radial-gradient(circle at 20% 50%, rgba(0, 255, 65, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 50%, rgba(0, 255, 255, 0.05) 0%, transparent 50%);
+            border-bottom: 1px solid var(--border);
+            position: relative;
+        }
+
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg,
+                transparent 0%,
+                var(--terminal-green) 50%,
+                transparent 100%);
+            animation: sweep 3s ease-in-out infinite;
+        }
+
+        @keyframes sweep {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        .hero h1 {
+            font-family: 'Space Mono', monospace;
+            font-size: 72px;
+            font-weight: 700;
+            line-height: 1.1;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: -2px;
+        }
+
+        .hero h1::before {
+            content: '$ ';
+            color: var(--terminal-cyan);
+        }
+
+        .terminal-green-text {
+            color: var(--terminal-green);
+            text-shadow: 0 0 20px rgba(0, 255, 65, 0.5);
+        }
+
+        .hero p {
+            font-size: 18px;
+            color: var(--text-dim);
+            max-width: 600px;
+            margin-bottom: 50px;
+            font-weight: 400;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 16px 32px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-decoration: none;
+            border: 2px solid;
+            background: transparent;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            color: var(--bg-dark);
+            background: var(--terminal-green);
+            border-color: var(--terminal-green);
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.4);
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 0 30px rgba(0, 255, 65, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            color: var(--terminal-cyan);
+            border-color: var(--terminal-cyan);
+        }
+
+        .btn-secondary:hover {
+            background: var(--terminal-cyan);
+            color: var(--bg-dark);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+        }
+
+        /* Features Section */
+        .features {
+            padding: 120px 0;
+            background: var(--bg-dark);
+        }
+
+        .section-title {
+            font-family: 'Space Mono', monospace;
+            font-size: 48px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            color: var(--terminal-green);
+            position: relative;
+            padding-left: 40px;
+        }
+
+        .section-title::before {
+            content: '//';
+            position: absolute;
+            left: 0;
+            color: var(--terminal-cyan);
+        }
+
+        .section-subtitle {
+            font-size: 16px;
+            color: var(--text-dim);
+            margin-bottom: 80px;
+            padding-left: 40px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 30px;
+        }
+
+        .feature-card {
+            background: var(--bg-darker);
+            border: 1px solid var(--border);
+            padding: 40px;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 0;
+            background: var(--terminal-green);
+            transition: height 0.3s;
+        }
+
+        .feature-card:hover {
+            border-color: var(--terminal-green);
+            transform: translateX(4px);
+        }
+
+        .feature-card:hover::before {
+            height: 100%;
+        }
+
+        .feature-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            filter: grayscale(1) brightness(1.2);
+        }
+
+        .feature-card h3 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--terminal-green);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .feature-card p {
+            color: var(--text-dim);
+            line-height: 1.8;
+        }
+
+        .feature-card code {
+            background: rgba(0, 255, 65, 0.1);
+            color: var(--terminal-green);
+            padding: 2px 6px;
+            font-size: 13px;
+        }
+
+        /* Terminal Code Section */
+        .code-example {
+            padding: 120px 0;
+            background: var(--bg-darker);
+        }
+
+        .terminal {
+            background: #000;
+            border: 2px solid var(--terminal-green);
+            border-radius: 0;
+            margin-top: 60px;
+            box-shadow:
+                0 0 30px rgba(0, 255, 65, 0.2),
+                inset 0 0 80px rgba(0, 255, 65, 0.02);
+        }
+
+        .terminal-header {
+            background: var(--bg-darker);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid var(--terminal-green);
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 0;
+            border: 1px solid;
+        }
+
+        .dot-red { border-color: var(--terminal-red); background: var(--terminal-red); }
+        .dot-yellow { border-color: var(--terminal-yellow); background: var(--terminal-yellow); }
+        .dot-green { border-color: var(--terminal-green); background: var(--terminal-green); }
+
+        .terminal-body {
+            padding: 40px;
+            font-size: 14px;
+            line-height: 1.8;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--terminal-green);
+        }
+
+        .terminal-body .comment { color: var(--text-dim); }
+        .terminal-body .prompt { color: var(--terminal-cyan); font-weight: 700; }
+        .terminal-body .command { color: var(--text); }
+        .terminal-body .success { color: var(--terminal-green); }
+        .terminal-body .output { color: var(--text-dim); }
+
+        /* Stats */
+        .stats {
+            padding: 80px 0;
+            background: var(--bg-dark);
+            border-top: 1px solid var(--border);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 40px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 40px;
+            background: var(--bg-darker);
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--terminal-green);
+            transform: scaleX(0);
+            transition: transform 0.3s;
+        }
+
+        .stat-item:hover::before {
+            transform: scaleX(1);
+        }
+
+        .stat-number {
+            font-family: 'Space Mono', monospace;
+            font-size: 48px;
+            font-weight: 700;
+            color: var(--terminal-green);
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(0, 255, 65, 0.4);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Threats */
+        .threats {
+            padding: 120px 0;
+            background: var(--bg-darker);
+        }
+
+        .threats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .threat-card {
+            background: var(--bg-dark);
+            border: 1px solid var(--terminal-red);
+            border-left: 4px solid var(--terminal-red);
+            padding: 30px;
+            transition: all 0.3s;
+        }
+
+        .threat-card:hover {
+            background: rgba(255, 0, 64, 0.05);
+            box-shadow: 0 0 30px rgba(255, 0, 64, 0.2);
+        }
+
+        .threat-card h4 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: var(--terminal-red);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .threat-card p {
+            color: var(--text-dim);
+            line-height: 1.7;
+        }
+
+        .threat-card code {
+            background: rgba(255, 0, 64, 0.1);
+            color: var(--terminal-red);
+            padding: 2px 6px;
+            font-size: 12px;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            padding: 120px 0;
+            background: linear-gradient(135deg,
+                var(--bg-darker) 0%,
+                rgba(0, 255, 65, 0.05) 50%,
+                var(--bg-darker) 100%);
+            text-align: center;
+            border-top: 2px solid var(--terminal-green);
+            border-bottom: 2px solid var(--terminal-green);
+        }
+
+        .cta-section h2 {
+            font-family: 'Space Mono', monospace;
+            font-size: 56px;
+            font-weight: 700;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            color: var(--terminal-green);
+        }
+
+        .cta-section p {
+            font-size: 18px;
+            color: var(--text-dim);
+            margin-bottom: 50px;
+        }
+
+        /* Footer */
+        footer {
+            padding: 60px 0;
+            background: var(--bg-darker);
+            border-top: 1px solid var(--border);
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-bottom: 30px;
+        }
+
+        .footer-links a {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: var(--terminal-green);
+        }
+
+        footer p {
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 12px;
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 48px; }
+            .section-title { font-size: 36px; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .features-grid,
+            .threats-grid { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -13,7 +569,7 @@
             <div class="header-content">
                 <a href="/" class="logo">
                     <span class="shield-icon">🛡️</span>
-                    <span>MCPShield</span>
+                    MCPShield
                 </a>
                 <nav>
                     <a href="#features">Features</a>
@@ -28,56 +584,56 @@
 
     <section class="hero">
         <div class="container">
-            <h1>🛡️ Supply Chain Security for MCP Servers</h1>
-            <p>Protect your AI applications from typosquats, vulnerabilities, and malicious code</p>
+            <h1><span class="terminal-green-text">Supply Chain<br>Security</span> for MCP</h1>
+            <p>Protect your AI applications from typosquats, vulnerabilities, and malicious code. Cryptographic verification. Policy enforcement. Zero trust.</p>
             <div class="cta-buttons">
-                <a href="quickstart.html" class="btn btn-primary">Get Started</a>
-                <a href="demo.html" class="btn btn-secondary">Try Demo</a>
-                <a href="https://github.com/yourusername/mcpshield" class="btn btn-secondary">View on GitHub</a>
+                <a href="quickstart.html" class="btn btn-primary">Initialize</a>
+                <a href="demo.html" class="btn btn-secondary">Run Demo</a>
+                <a href="https://github.com/yourusername/mcpshield" class="btn btn-secondary">View Source</a>
             </div>
         </div>
     </section>
 
     <section class="features" id="features">
         <div class="container">
-            <h2 class="section-title">How MCPShield Protects You</h2>
+            <h2 class="section-title">Protection Matrix</h2>
             <p class="section-subtitle">Comprehensive security for Model Context Protocol servers</p>
-            
+
             <div class="features-grid">
                 <div class="feature-card">
                     <div class="feature-icon">🔒</div>
                     <h3>Lockfile Management</h3>
-                    <p>Track verified MCP servers in <code>mcp.lock.json</code> with cryptographic hashes. Know exactly what's running in your environment.</p>
+                    <p>Track verified MCP servers in <code>mcp.lock.json</code> with SHA-512 cryptographic hashes. Immutable integrity verification.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🔍</div>
                     <h3>Security Scanning</h3>
-                    <p>Detect typosquats, suspicious code patterns, malicious dependencies, and known vulnerabilities before they reach production.</p>
+                    <p>Detect typosquats, suspicious code patterns, malicious dependencies, and known CVEs before deployment.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">✅</div>
                     <h3>Artifact Verification</h3>
-                    <p>Verify npm packages, PyPI distributions, and Docker images with SHA-512 digests. Detect drift automatically.</p>
+                    <p>Verify npm packages, PyPI distributions, and Docker images. Automatic drift detection across platforms.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">📋</div>
                     <h3>Namespace Verification</h3>
-                    <p>Validate GitHub namespaces and repository ownership. Prevent namespace hijacking attacks.</p>
+                    <p>Validate GitHub namespaces and repository ownership. Prevent namespace hijacking and impersonation attacks.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">⚡</div>
                     <h3>Fast CLI</h3>
-                    <p>Simple commands: <code>init</code>, <code>add</code>, <code>verify</code>, <code>scan</code>. Integrates seamlessly into your workflow.</p>
+                    <p>Sub-second scans. Commands: <code>init</code>, <code>add</code>, <code>verify</code>, <code>scan</code>. Zero configuration required.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🎯</div>
                     <h3>Policy Enforcement</h3>
-                    <p>Define security policies in <code>policy.yaml</code>. Block high-risk packages, enforce verification, and automate compliance.</p>
+                    <p>Define security policies in <code>policy.yaml</code>. Block high-risk packages. Enforce verification. Automate compliance.</p>
                 </div>
             </div>
         </div>
@@ -85,8 +641,8 @@
 
     <section class="code-example">
         <div class="container">
-            <h2 class="section-title">See It In Action</h2>
-            <p class="section-subtitle">Four simple commands to secure your MCP servers</p>
+            <h2 class="section-title">Initialization Sequence</h2>
+            <p class="section-subtitle">Four commands to secure your supply chain</p>
 
             <div class="terminal">
                 <div class="terminal-header">
@@ -94,8 +650,7 @@
                     <div class="terminal-dot dot-yellow"></div>
                     <div class="terminal-dot dot-green"></div>
                 </div>
-                <div class="terminal-body">
-<span class="comment"># 1. Initialize MCPShield in your project</span>
+                <div class="terminal-body"><span class="comment"># 1. Initialize MCPShield in your project</span>
 <span class="prompt">$</span> <span class="command">mcp-shield init</span>
 <span class="success">✓</span> Created mcp.lock.json
 <span class="success">✓</span> Created policy.yaml
@@ -110,7 +665,7 @@
 <span class="output">📊 Security Scan Results:</span>
 <span class="output">  Risk Score: 15/100 (clean)</span>
 <span class="output">  Verdict: ✅ CLEAN</span>
-<span class="output">  
+
 <span class="success">✓</span> No typosquats detected
 <span class="success">✓</span> No suspicious code patterns
 <span class="success">✓</span> Dependencies verified
@@ -124,8 +679,7 @@
 <span class="comment"># 4. Run comprehensive security scan</span>
 <span class="prompt">$</span> <span class="command">mcp-shield scan</span>
 <span class="output">Scanning 1 server(s)...</span>
-<span class="success">✓</span> All servers passed security checks
-                </div>
+<span class="success">✓</span> All servers passed security checks</div>
             </div>
         </div>
     </section>
@@ -143,10 +697,10 @@
                 </div>
                 <div class="stat-item">
                     <div class="stat-number">SHA-512</div>
-                    <div class="stat-label">Cryptographic Hashing</div>
+                    <div class="stat-label">Cryptographic</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-number">&lt; 1s</div>
+                    <div class="stat-number">&lt;1s</div>
                     <div class="stat-label">Scan Time</div>
                 </div>
             </div>
@@ -155,7 +709,7 @@
 
     <section class="threats">
         <div class="container">
-            <h2 class="section-title">Threats We Protect Against</h2>
+            <h2 class="section-title">Threat Matrix</h2>
             <p class="section-subtitle">Real supply chain attacks targeting AI systems</p>
 
             <div class="threats-grid">
@@ -166,27 +720,27 @@
 
                 <div class="threat-card">
                     <h4>🔓 Namespace Hijacking</h4>
-                    <p>Attackers claiming namespaces that look official but aren't verified</p>
+                    <p>Attackers claiming namespaces that appear official but lack proper verification</p>
                 </div>
 
                 <div class="threat-card">
                     <h4>📦 Artifact Drift</h4>
-                    <p>Packages changing after initial approval, introducing malicious code</p>
+                    <p>Packages changing after initial approval, introducing malicious code post-verification</p>
                 </div>
 
                 <div class="threat-card">
                     <h4>💀 Malicious Code</h4>
-                    <p>Hidden eval(), exec(), network calls, and suspicious install scripts</p>
+                    <p>Hidden <code>eval()</code>, <code>exec()</code>, unauthorized network calls, and suspicious install scripts</p>
                 </div>
 
                 <div class="threat-card">
                     <h4>🕸️ Dependency Confusion</h4>
-                    <p>Malicious dependencies that masquerade as internal packages</p>
+                    <p>Malicious dependencies masquerading as internal packages to bypass security controls</p>
                 </div>
 
                 <div class="threat-card">
                     <h4>🚨 Known Vulnerabilities</h4>
-                    <p>Outdated packages with publicly disclosed security issues</p>
+                    <p>Outdated packages with publicly disclosed CVEs and exploitable security issues</p>
                 </div>
             </div>
         </div>
@@ -194,11 +748,11 @@
 
     <section class="cta-section">
         <div class="container">
-            <h2>Ready to Secure Your MCP Servers?</h2>
-            <p>Join developers protecting their AI applications from supply chain attacks</p>
+            <h2>Secure Your Supply Chain</h2>
+            <p>Join developers protecting AI applications from supply chain attacks</p>
             <div class="cta-buttons">
-                <a href="quickstart.html" class="btn btn-primary">Get Started Now</a>
-                <a href="demo.html" class="btn btn-secondary">Try Interactive Demo</a>
+                <a href="quickstart.html" class="btn btn-primary">Get Started</a>
+                <a href="demo.html" class="btn btn-secondary">Try Demo</a>
             </div>
         </div>
     </section>
@@ -212,7 +766,7 @@
                 <a href="https://modelcontextprotocol.io/">MCP Protocol</a>
                 <a href="https://registry.modelcontextprotocol.io/">MCP Registry</a>
             </div>
-            <p>&copy; 2026 MCPShield. MIT License. Built with ❤️ for the MCP community.</p>
+            <p>&copy; 2026 MCPShield. MIT License. Built for the MCP community.</p>
         </div>
     </footer>
 </body>
