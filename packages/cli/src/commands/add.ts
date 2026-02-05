@@ -1,20 +1,40 @@
 /**
  * mcp-shield add - Add an MCP server to your project
  * 
- * Fetches server metadata from registry, verifies namespace ownership,
- * and displays results. Later we'll add downloading/scanning/lockfile updates.
+ * Full workflow:
+ * 1. Fetch server metadata from registry
+ * 2. Verify namespace ownership
+ * 3. Download artifact
+ * 4. Verify digest
+ * 5. Run security scan
+ * 6. Generate policy stub
+ * 7. Write to lockfile
+ * 8. Interactive approval
  */
 
 import chalk from 'chalk';
-import { RegistryClient } from '@mcpshield/core';
-import { verifyNamespace, isValidNamespaceFormat } from '@mcpshield/core';
+import prompts from 'prompts';
+import {
+  RegistryClient,
+  Package,
+  verifyNamespace,
+  isValidNamespaceFormat,
+  LockfileManager,
+  LockfileEntry,
+  NpmResolver,
+  PyPIResolver,
+  DigestVerifier,
+  CacheManager,
+} from '@mcpshield/core';
+import { BasicScanner } from '@mcpshield/scanner';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import * as os from 'os';
 
 /**
  * Add command handler
- * 
- * @param serverName - Server name in format: io.github.user/server-name
  */
-export async function addCommand(serverName: string): Promise<void> {
+export async function addCommand(serverName: string, options: { yes?: boolean } = {}): Promise<void> {
   console.log(chalk.blue(`\n📦 Adding MCP server: ${serverName}\n`));
 
   // Step 1: Validate namespace format
@@ -63,7 +83,7 @@ export async function addCommand(serverName: string): Promise<void> {
     );
   }
 
-  // Step 4: Display results
+  // Step 4: Display server details
   console.log(chalk.bold('\n📋 Server Details:\n'));
   console.log(`  ${chalk.bold('Name:')} ${server.name}`);
   console.log(`  ${chalk.bold('Version:')} ${server.version}`);
@@ -73,7 +93,6 @@ export async function addCommand(serverName: string): Promise<void> {
     console.log(`  ${chalk.bold('Repository:')} ${server.repository.url}`);
   }
 
-  // Publisher identity
   const identity = client.extractPublisherIdentity(response);
   console.log(`\n  ${chalk.bold('Publisher Status:')} ${formatStatus(identity.status)}`);
   
@@ -85,31 +104,120 @@ export async function addCommand(serverName: string): Promise<void> {
     console.log(`  ${chalk.bold('NPM Package:')} ${identity.npm.package}`);
   }
 
-  // Verification details
-  if (verification.details?.githubOwner) {
-    console.log(`\n  ${chalk.bold('Verification:')}`);
-    console.log(`    ${chalk.dim('Method:')} ${verification.method}`);
-    console.log(`    ${chalk.dim('GitHub Owner:')} ${verification.details.githubOwner}`);
-    if (verification.details.githubRepo) {
-      console.log(`    ${chalk.dim('GitHub Repo:')} ${verification.details.githubRepo}`);
-    }
-  }
-
-  // Packages
   console.log(`\n  ${chalk.bold('Packages:')} ${server.packages.length}`);
   server.packages.forEach(pkg => {
     console.log(`    • ${chalk.cyan(pkg.type)}: ${pkg.identifier}@${pkg.version}`);
   });
 
-  // Next steps (placeholder for future)
-  console.log(chalk.dim('\n→ Next: Download, scan, and add to lockfile'));
-  console.log(chalk.yellow('\n⚠ Download/scan/lockfile features coming soon!'));
-  console.log(chalk.dim('  For now, this is just fetching and verifying metadata.\n'));
+  // Step 5: Download and verify artifacts
+  console.log(chalk.bold('\n📥 Downloading artifacts...\n'));
+  
+  const artifacts: Array<{ type: string; url: string; digest: string; size?: number }> = [];
+  const cache = new CacheManager();
+  const scanner = new BasicScanner();
+  
+  for (const pkg of server.packages) {
+    console.log(chalk.dim(`→ Processing ${pkg.type} package: ${pkg.identifier}@${pkg.version}`));
+    
+    try {
+      if (pkg.type === 'npm') {
+        const resolver = new NpmResolver();
+        const result = await resolver.resolve(`${pkg.identifier}@${pkg.version}`);
+        
+        // Download to temp file
+        const tempPath = path.join(os.tmpdir(), `mcpshield-${Date.now()}.tgz`);
+        const digest = await resolver.download(result.artifact, tempPath);
+        
+        console.log(chalk.green(`  ✓ Downloaded and verified`));
+        console.log(chalk.dim(`    Digest: ${digest}`));
+        
+        // Store in cache
+        await cache.put(digest, tempPath);
+        
+        artifacts.push({
+          type: pkg.type,
+          url: result.artifact.url,
+          digest,
+          size: result.artifact.size,
+        });
+        
+        // Step 6: Run security scan
+        console.log(chalk.dim('  → Running security scan...'));
+        const buffer = await fs.readFile(tempPath);
+        const scanResult = await scanner.scanPackage(pkg, buffer);
+        
+        console.log(`  ${formatVerdict(scanResult.verdict)} Risk Score: ${scanResult.riskScore}/100`);
+        
+        if (scanResult.findings.length > 0) {
+          console.log(chalk.dim(`  → ${scanResult.findings.length} finding(s):`));
+          for (const finding of scanResult.findings.slice(0, 3)) {
+            const icon = getSeverityIcon(finding.severity);
+            console.log(`     ${icon} ${chalk.dim(finding.category)}: ${finding.message}`);
+          }
+          if (scanResult.findings.length > 3) {
+            console.log(chalk.dim(`     ... and ${scanResult.findings.length - 3} more`));
+          }
+        }
+        
+        // Clean up temp file
+        await fs.unlink(tempPath);
+        
+      } else if (pkg.type === 'pypi') {
+        console.log(chalk.yellow(`  ⚠ PyPI packages not fully supported yet`));
+      } else {
+        console.log(chalk.dim(`  → Skipping ${pkg.type} package (not yet supported)`));
+      }
+    } catch (err: any) {
+      console.error(chalk.red(`  ✗ Failed: ${err.message}`));
+    }
+  }
+  
+  if (artifacts.length === 0) {
+    console.error(chalk.red('\n✗ No artifacts could be downloaded. Aborting.'));
+    process.exit(1);
+  }
+
+  // Step 7: Interactive approval
+  if (!options.yes) {
+    console.log();
+    const { approve } = await prompts({
+      type: 'confirm',
+      name: 'approve',
+      message: 'Add this server to mcp.lock.json?',
+      initial: true,
+    });
+    
+    if (!approve) {
+      console.log(chalk.yellow('\n⚠ Aborted. Server not added.'));
+      return;
+    }
+  }
+
+  // Step 8: Write to lockfile
+  console.log(chalk.dim('\n→ Updating lockfile...'));
+  
+  const lockfileManager = new LockfileManager();
+  
+  const entry: LockfileEntry = {
+    namespace: server.name,
+    version: server.version,
+    resolved: response.server.repository?.url,
+    verified: verification.verified,
+    verificationMethod: verification.method,
+    verifiedOwner: verification.details?.githubOwner || null,
+    fetchedAt: new Date().toISOString(),
+    artifacts,
+  };
+  
+  await lockfileManager.addServer(entry);
+  
+  console.log(chalk.green('✓ Server added to mcp.lock.json'));
+  console.log(chalk.dim('\nNext steps:'));
+  console.log(chalk.dim('  • Run `mcp-shield verify` to re-verify all servers'));
+  console.log(chalk.dim('  • Run `mcp-shield scan` for a security report'));
+  console.log(chalk.dim('  • Edit policy.yaml to configure server policies\n'));
 }
 
-/**
- * Format publisher status with colors
- */
 function formatStatus(status: string | undefined): string {
   switch (status) {
     case 'official':
@@ -120,5 +228,35 @@ function formatStatus(status: string | undefined): string {
       return chalk.yellow('Community');
     default:
       return chalk.gray('Unknown');
+  }
+}
+
+function formatVerdict(verdict: string): string {
+  switch (verdict) {
+    case 'clean':
+      return chalk.green('✓ Clean');
+    case 'warning':
+      return chalk.yellow('⚠ Warning');
+    case 'suspicious':
+      return chalk.red('⚠ Suspicious');
+    case 'malicious':
+      return chalk.red('✗ Malicious');
+    default:
+      return chalk.gray('? Unknown');
+  }
+}
+
+function getSeverityIcon(severity: string): string {
+  switch (severity) {
+    case 'critical':
+      return chalk.red('●');
+    case 'high':
+      return chalk.red('●');
+    case 'medium':
+      return chalk.yellow('●');
+    case 'low':
+      return chalk.blue('●');
+    default:
+      return chalk.gray('●');
   }
 }

@@ -6,7 +6,7 @@
 
 import { Command } from 'commander';
 import { RegistryClient } from '@mcpshield/core';
-import { addCommand } from './commands/add.js';
+import { addCommand, initCommand, verifyCommand, scanCommand } from './commands/index.js';
 
 const program = new Command();
 
@@ -15,40 +15,59 @@ program
   .description('Supply chain security tool for MCP servers')
   .version('0.1.0');
 
-// Main commands
+// init command
 program
-  .command('add')
-  .description('Add an MCP server to your project')
-  .argument('<server-name>', 'Server name from registry (e.g., io.github.user/server-name)')
-  .action(async (serverName: string) => {
+  .command('init')
+  .description('Initialize MCPShield in current directory')
+  .action(async () => {
     try {
-      await addCommand(serverName);
+      await initCommand();
     } catch (error: any) {
       console.error(`\nError: ${error.message}`);
       process.exit(1);
     }
   });
 
-// Placeholder for future commands
+// add command
 program
-  .command('init')
-  .description('Initialize MCPShield in current directory')
-  .action(() => {
-    console.log('Coming soon: mcp-shield init');
+  .command('add')
+  .description('Add an MCP server to your project')
+  .argument('<server-name>', 'Server name from registry (e.g., io.github.user/server-name)')
+  .option('-y, --yes', 'Skip confirmation prompts')
+  .action(async (serverName: string, options: { yes?: boolean }) => {
+    try {
+      await addCommand(serverName, options);
+    } catch (error: any) {
+      console.error(`\nError: ${error.message}`);
+      process.exit(1);
+    }
   });
 
+// verify command
 program
   .command('verify')
   .description('Verify all servers in lockfile')
-  .action(() => {
-    console.log('Coming soon: mcp-shield verify');
+  .action(async () => {
+    try {
+      const exitCode = await verifyCommand();
+      process.exit(exitCode);
+    } catch (error: any) {
+      console.error(`\nError: ${error.message}`);
+      process.exit(1);
+    }
   });
 
+// scan command
 program
   .command('scan')
   .description('Scan all servers for security issues')
-  .action(() => {
-    console.log('Coming soon: mcp-shield scan');
+  .action(async () => {
+    try {
+      await scanCommand();
+    } catch (error: any) {
+      console.error(`\nError: ${error.message}`);
+      process.exit(1);
+    }
   });
 
 // Dev/test commands

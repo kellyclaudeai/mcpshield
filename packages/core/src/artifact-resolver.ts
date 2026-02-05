@@ -87,7 +87,18 @@ export class NpmResolver extends ArtifactResolver {
     
     return new Promise((resolve, reject) => {
       const file = fs.createWriteStream(outputPath);
-      const hash = crypto.createHash('sha256');
+      
+      // Determine hash algorithm from integrity string
+      let algorithm = 'sha512'; // npm default
+      if (artifact.integrity) {
+        if (artifact.integrity.startsWith('sha256-')) {
+          algorithm = 'sha256';
+        } else if (artifact.integrity.startsWith('sha512-')) {
+          algorithm = 'sha512';
+        }
+      }
+      
+      const hash = crypto.createHash(algorithm);
       
       https.get(artifact.url, (res) => {
         if (res.statusCode !== 200) {
@@ -101,7 +112,7 @@ export class NpmResolver extends ArtifactResolver {
         
         res.on('end', () => {
           file.end();
-          const digest = `sha256-${hash.digest('base64')}`;
+          const digest = `${algorithm}-${hash.digest('base64')}`;
           
           // Verify integrity if provided
           if (artifact.integrity && artifact.integrity !== digest) {
@@ -133,6 +144,170 @@ export class NpmResolver extends ArtifactResolver {
     }
     
     return { name, version };
+  }
+}
+
+/**
+ * PyPI Package Resolver
+ */
+export class PyPIResolver extends ArtifactResolver {
+  private registryUrl: string;
+  
+  constructor(registryUrl: string = 'https://pypi.org') {
+    super();
+    this.registryUrl = registryUrl;
+  }
+  
+  /**
+   * Resolve PyPI package metadata
+   * @param identifier - package==version
+   */
+  async resolve(identifier: string): Promise<ResolverResult> {
+    const { name, version } = this.parseIdentifier(identifier);
+    const url = `${this.registryUrl}/pypi/${name}/${version}/json`;
+    
+    return new Promise((resolve, reject) => {
+      https.get(url, (res) => {
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => {
+          if (res.statusCode !== 200) {
+            return reject(new Error(`PyPI registry returned ${res.statusCode}`));
+          }
+          
+          try {
+            const metadata = JSON.parse(data);
+            const urls = metadata.urls;
+            
+            // Find the source distribution or wheel
+            const sdist = urls.find((u: any) => u.packagetype === 'sdist');
+            const wheel = urls.find((u: any) => u.packagetype === 'bdist_wheel');
+            const artifact_data = sdist || wheel || urls[0];
+            
+            if (!artifact_data) {
+              return reject(new Error(`No downloadable artifacts found for ${name}@${version}`));
+            }
+            
+            const artifact: ArtifactInfo = {
+              url: artifact_data.url,
+              digest: artifact_data.digests?.sha256 ? `sha256-${Buffer.from(artifact_data.digests.sha256, 'hex').toString('base64')}` : undefined,
+              size: artifact_data.size,
+              type: 'pypi'
+            };
+            
+            resolve({ artifact, metadata });
+          } catch (err) {
+            reject(err);
+          }
+        });
+      }).on('error', reject);
+    });
+  }
+  
+  /**
+   * Download PyPI package
+   */
+  async download(artifact: ArtifactInfo, outputPath: string): Promise<string> {
+    await fs.promises.mkdir(path.dirname(outputPath), { recursive: true });
+    
+    return new Promise((resolve, reject) => {
+      const file = fs.createWriteStream(outputPath);
+      const hash = crypto.createHash('sha256');
+      
+      https.get(artifact.url, (res) => {
+        if (res.statusCode !== 200) {
+          return reject(new Error(`Download failed: ${res.statusCode}`));
+        }
+        
+        res.on('data', (chunk) => {
+          hash.update(chunk);
+          file.write(chunk);
+        });
+        
+        res.on('end', () => {
+          file.end();
+          const digest = `sha256-${hash.digest('base64')}`;
+          
+          // Verify digest if provided
+          if (artifact.digest && artifact.digest !== digest) {
+            fs.unlinkSync(outputPath);
+            return reject(new Error(`Digest mismatch: expected ${artifact.digest}, got ${digest}`));
+          }
+          
+          resolve(digest);
+        });
+      }).on('error', (err) => {
+        fs.unlinkSync(outputPath);
+        reject(err);
+      });
+    });
+  }
+  
+  private parseIdentifier(identifier: string): { name: string; version: string } {
+    const parts = identifier.split('==');
+    if (parts.length !== 2) {
+      throw new Error(`Invalid PyPI identifier: ${identifier}. Expected format: package==version`);
+    }
+    
+    return { name: parts[0], version: parts[1] };
+  }
+}
+
+/**
+ * Docker Image Resolver
+ * 
+ * Note: This is a simplified implementation. Real Docker image pulling requires
+ * Docker Registry API v2 and proper authentication handling.
+ */
+export class DockerResolver extends ArtifactResolver {
+  private registryUrl: string;
+  
+  constructor(registryUrl: string = 'https://registry-1.docker.io') {
+    super();
+    this.registryUrl = registryUrl;
+  }
+  
+  /**
+   * Resolve Docker image manifest
+   * @param identifier - image:tag or registry/image:tag
+   */
+  async resolve(identifier: string): Promise<ResolverResult> {
+    // Parse identifier (simplified - real implementation needs more robust parsing)
+    const parts = identifier.split(':');
+    const image = parts[0] || 'library/unknown';
+    const tag = parts[1] || 'latest';
+    
+    // This is a placeholder - real implementation would:
+    // 1. Authenticate with Docker registry
+    // 2. Fetch manifest v2 schema 2
+    // 3. Extract config digest and layer digests
+    // 4. Return proper artifact info
+    
+    return Promise.resolve({
+      artifact: {
+        url: `${this.registryUrl}/v2/${image}/manifests/${tag}`,
+        type: 'docker',
+        digest: undefined // Would be computed from manifest
+      },
+      metadata: {
+        image,
+        tag,
+        note: 'Docker resolver is a placeholder - requires full Docker Registry API v2 implementation'
+      }
+    });
+  }
+  
+  /**
+   * Download Docker image (placeholder)
+   */
+  async download(artifact: ArtifactInfo, outputPath: string): Promise<string> {
+    // Real implementation would:
+    // 1. Download all layers
+    // 2. Verify each layer digest
+    // 3. Combine into OCI image layout or Docker save format
+    // 4. Return overall digest
+    
+    throw new Error('Docker image downloading not yet implemented - requires full Docker Registry API v2');
   }
 }
 

@@ -4,8 +4,13 @@
  * Re-fetch metadata, re-download artifacts, verify digests against lockfile
  */
 
-import { LockfileManager } from '../../../core/src/lockfile';
-import { NpmResolver, DigestVerifier, CacheManager } from '../../../core/src/artifact-resolver';
+import {
+  LockfileManager,
+  LockfileEntry,
+  NpmResolver,
+  DigestVerifier,
+  CacheManager,
+} from '@mcpshield/core';
 import * as path from 'path';
 import * as os from 'os';
 
@@ -36,16 +41,17 @@ export async function verifyCommand(): Promise<number> {
   let driftDetected = false;
   
   for (const [namespace, entry] of Object.entries(lockfile.servers)) {
-    console.log(`Verifying: ${namespace}@${entry.version}`);
+    const typedEntry = entry as LockfileEntry;
+    console.log(`Verifying: ${namespace}@${typedEntry.version}`);
     
     try {
       // Skip non-npm artifacts for now
-      if (!entry.artifacts || entry.artifacts.length === 0) {
+      if (!typedEntry.artifacts || typedEntry.artifacts.length === 0) {
         console.log('  ⚠️  No artifacts to verify (skipped)\n');
         continue;
       }
       
-      for (const artifact of entry.artifacts) {
+      for (const artifact of typedEntry.artifacts) {
         if (artifact.type !== 'npm') {
           console.log(`  ⚠️  Skipping ${artifact.type} artifact\n`);
           continue;

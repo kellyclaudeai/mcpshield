@@ -5,5 +5,14 @@
 export * from './types.js';
 export * from './registry-client.js';
 export * from './namespace-verifier.js';
-export * from './lockfile.js';
-export * from './artifact-resolver.js';
+export { LockfileManager, LockfileEntry, LockfileData } from './lockfile.js';
+export {
+  ArtifactResolver,
+  NpmResolver,
+  PyPIResolver,
+  DockerResolver,
+  DigestVerifier,
+  CacheManager,
+  ArtifactInfo,
+  ResolverResult,
+} from './artifact-resolver.js';

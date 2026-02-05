@@ -25,7 +25,7 @@ export interface LockfileEntry {
   }[];
 }
 
-export interface Lockfile {
+export interface LockfileData {
   version: string;
   generatedAt: string;
   servers: Record<string, LockfileEntry>;
@@ -41,7 +41,7 @@ export class LockfileManager {
   /**
    * Read existing lockfile or create empty one
    */
-  async read(): Promise<Lockfile> {
+  async read(): Promise<LockfileData> {
     try {
       const content = await fs.readFile(this.lockfilePath, 'utf-8');
       return this.normalize(JSON.parse(content));
@@ -56,7 +56,7 @@ export class LockfileManager {
   /**
    * Write lockfile with stable formatting
    */
-  async write(lockfile: Lockfile): Promise<void> {
+  async write(lockfile: LockfileData): Promise<void> {
     const normalized = this.normalize(lockfile);
     const content = JSON.stringify(normalized, null, 2) + '\n';
     await fs.writeFile(this.lockfilePath, content, 'utf-8');
@@ -105,7 +105,7 @@ export class LockfileManager {
   /**
    * Validate lockfile structure
    */
-  validate(lockfile: Lockfile): { valid: boolean; errors: string[] } {
+  validate(lockfile: LockfileData): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
     
     if (!lockfile.version) {
@@ -141,7 +141,7 @@ export class LockfileManager {
   /**
    * Normalize lockfile (stable ordering, canonical format)
    */
-  private normalize(lockfile: Lockfile): Lockfile {
+  private normalize(lockfile: LockfileData): LockfileData {
     // Sort servers alphabetically by namespace
     const sortedServers: Record<string, LockfileEntry> = {};
     const namespaces = Object.keys(lockfile.servers).sort();
@@ -160,7 +160,7 @@ export class LockfileManager {
   /**
    * Create empty lockfile structure
    */
-  private createEmpty(): Lockfile {
+  private createEmpty(): LockfileData {
     return {
       version: '1.0.0',
       generatedAt: new Date().toISOString(),
@@ -171,7 +171,7 @@ export class LockfileManager {
   /**
    * Compute diff between two lockfiles
    */
-  static diff(oldLockfile: Lockfile, newLockfile: Lockfile): {
+  static diff(oldLockfile: LockfileData, newLockfile: LockfileData): {
     added: string[];
     removed: string[];
     changed: Array<{ namespace: string; oldVersion: string; newVersion: string }>;
