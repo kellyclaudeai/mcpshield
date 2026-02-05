@@ -8,6 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
   security-events: write
 
@@ -38,4 +39,3 @@ jobs:
         with:
           sarif_file: results.sarif
           category: mcpshield
-

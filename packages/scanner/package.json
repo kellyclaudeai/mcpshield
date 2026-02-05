@@ -1,6 +1,6 @@
 {
   "name": "@mcpshield/scanner",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Security scanning functionality for MCPShield",
   "license": "MIT",
   "repository": {
@@ -27,7 +27,7 @@
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
-    "@mcpshield/core": "^0.1.0",
+    "@mcpshield/core": "^0.1.1",
     "fast-levenshtein": "^3.0.0",
     "tar": "^7.5.3"
   },

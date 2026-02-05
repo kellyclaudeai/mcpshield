@@ -1,6 +1,6 @@
 {
   "name": "@mcpshield/cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Command-line interface for MCPShield",
   "license": "MIT",
   "repository": {
@@ -30,8 +30,8 @@
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
-    "@mcpshield/core": "^0.1.0",
-    "@mcpshield/scanner": "^0.1.0",
+    "@mcpshield/core": "^0.1.1",
+    "@mcpshield/scanner": "^0.1.1",
     "commander": "^12.0.0",
     "chalk": "^5.3.0",
     "ora": "^8.0.1",
