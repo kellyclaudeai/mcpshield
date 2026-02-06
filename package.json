@@ -13,7 +13,7 @@
     "test:unit": "pnpm -r --filter \"./packages/**\" test",
     "test:e2e": "node scripts/run-node-tests.mjs --import tsx test/e2e/**/*.test.ts",
     "test:watch": "node scripts/run-node-tests.mjs --import tsx --watch test/e2e/**/*.test.ts",
-    "lint": "eslint packages --ext .ts",
+    "lint": "eslint packages --ext .ts --max-warnings 100",
     "release:publish": "node scripts/publish-workspaces.mjs",
     "release:publish:dry-run": "node scripts/publish-workspaces.mjs --dry-run",
     "release:smoke:local": "node scripts/smoke-cli-local.mjs",
