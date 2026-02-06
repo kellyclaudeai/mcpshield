@@ -39,6 +39,7 @@ tmp/
 temp/
 *.tmp
 .mcpshield/
+.husky/_/
 
 # Lock files (keep mcp.lock examples)
 !examples/mcp.lock.example.json

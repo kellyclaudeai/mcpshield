@@ -165,6 +165,21 @@ pnpm run lint -- --fix
 3. **Add tests** - Include tests for new features
 4. **Commit messages** - Write clear, descriptive commit messages
 
+### Pre-Push Checks
+
+This repo uses Husky to block `git push` if local validation fails. The `pre-push` hook runs:
+
+- Workflow sanity checks (`pnpm run validate:workflows`)
+- Lint (`pnpm run lint`)
+- Build (`pnpm run build`)
+- Unit tests (`pnpm run test:unit`)
+
+If you need to bypass hooks in an emergency, set `HUSKY=0` for that command (not recommended):
+
+```bash
+HUSKY=0 git push
+```
+
 ### Commit Message Format
 
 Use conventional commits:
