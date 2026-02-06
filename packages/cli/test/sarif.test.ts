@@ -12,7 +12,7 @@ describe('SARIF', () => {
           namespace: 'io.github.example/server',
           version: '1.2.3',
           findings: [
-            { ruleId: 'CODE_EVAL', severity: 'high', category: 'code-pattern', message: 'Use of eval() detected' },
+            { ruleId: 'CODE_EVAL', severity: 'high', category: 'code-pattern', message: 'Use of eval() detected', file: 'dist/index.js' },
             { ruleId: 'DEP_UNRESOLVED_SPEC', severity: 'medium', category: 'dependencies', message: 'Unresolved spec' },
           ],
         },
@@ -30,11 +30,13 @@ describe('SARIF', () => {
     assert.ok(run.automationDetails?.id);
 
     assert.equal(run.results.length, 2);
-    assert.equal(run.results[0].locations[0].physicalLocation.artifactLocation.uri, 'mcp.lock.json');
+    assert.equal(
+      run.results[0].locations[0].physicalLocation.artifactLocation.uri,
+      'mcpshield://artifact/io.github.example/server@1.2.3/dist/index.js'
+    );
 
     // Severity mapping
     const levels = run.results.map((r: any) => r.level).sort();
     assert.deepEqual(levels, ['error', 'warning']);
   });
 });
-

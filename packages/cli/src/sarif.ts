@@ -7,6 +7,7 @@ export interface SarifFindingInput {
   severity: McpshieldSeverity;
   category: string;
   message: string;
+  file?: string;
 }
 
 export interface SarifArtifactInput {
@@ -28,6 +29,10 @@ function stableHash(value: unknown): string {
 
 function fingerprint(value: string): string {
   return crypto.createHash('sha256').update(value).digest('hex').slice(0, 16);
+}
+
+function normalizeUriPath(value: string): string {
+  return value.replace(/\\/g, '/').replace(/^\.\//, '');
 }
 
 export function generateSarifReport(options: {
@@ -73,7 +78,12 @@ export function generateSarifReport(options: {
         locations: [
           {
             physicalLocation: {
-              artifactLocation: { uri: lockfileUri },
+              artifactLocation: {
+                uri:
+                  typeof finding.file === 'string' && finding.file.length > 0
+                    ? `mcpshield://artifact/${artifact.namespace}@${artifact.version}/${normalizeUriPath(finding.file)}`
+                    : lockfileUri,
+              },
               region: { startLine: 1 },
             },
           },

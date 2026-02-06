@@ -149,7 +149,7 @@ When built, each package generates:
 
 ✅ **TypeScript Strict Mode**: All type safety features enabled  
 ✅ **ESM Modules**: Modern ES module syntax throughout  
-✅ **Monorepo**: npm workspaces with cross-package references  
+✅ **Monorepo**: pnpm workspaces with cross-package references  
 ✅ **Test Infrastructure**: Node.js built-in test runner  
 ✅ **Type Exports**: Full TypeScript declaration files  
 ✅ **Source Maps**: Debugging support for compiled code  
@@ -158,19 +158,19 @@ When built, each package generates:
 
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
 # Build all packages
-npm run build
+pnpm run build
 
 # Test all packages
-npm test
+pnpm test
 
 # Clean build artifacts
-npm run clean
+pnpm run clean
 
 # Lint (ESLint ready but not configured yet)
-npm run lint
+pnpm run lint
 ```
 
 ## Entry Points
@@ -197,7 +197,7 @@ mcp-shield [command]
 - Artifact resolution for npm (cache, offline mode, timeouts/redirect limits)
 - Scanner with safe extraction and rule taxonomy
 - Dependency vulnerability reporting via OSV (Pilot: direct dependencies)
-- CLI commands: init/add/verify/scan/lock validate/cache gc/cache purge/doctor
+- CLI commands: init/search/add/verify/scan/lock validate/cache gc/cache purge/doctor
 - Deterministic JSON output and SARIF output for GitHub Code Scanning
 
 ### ⚠️ Best Effort / Future

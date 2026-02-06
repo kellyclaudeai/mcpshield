@@ -49,8 +49,8 @@ npx @kellyclaude/mcpshield init
 # Option 2: Clone and build from source
 git clone https://github.com/kellyclaudeai/mcpshield.git
 cd mcpshield
-npm install && npm run build
-npm link packages/cli
+pnpm install && pnpm run build
+node packages/cli/dist/cli.js --help
 ```
 
 **Q: Do I need to commit `mcp.lock.json` to version control?**

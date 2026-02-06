@@ -72,9 +72,14 @@ async function main() {
   const cliBin = path.join(tempDir, 'node_modules', '.bin', 'mcp-shield');
 
   try {
-    await runCommand('npm', ['init', '-y'], { cwd: tempDir });
-    await runCommand('npm', ['install', ...dependencyTarballs], { cwd: tempDir });
-    await runCommand('npm', ['install', cliTarball.file], { cwd: tempDir });
+    await fs.writeFile(
+      path.join(tempDir, 'package.json'),
+      JSON.stringify({ name: 'mcpshield-smoke-local', private: true }, null, 2) + '\n',
+      'utf8',
+    );
+
+    await runCommand('pnpm', ['add', ...dependencyTarballs], { cwd: tempDir });
+    await runCommand('pnpm', ['add', cliTarball.file], { cwd: tempDir });
 
     await runCommand(cliBin, ['--help'], { cwd: tempDir });
     await runCommand(cliBin, ['init', '--json'], { cwd: tempDir });
@@ -92,4 +97,3 @@ main().catch((error) => {
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);
 });
-

@@ -33,7 +33,11 @@ export async function cacheGcCommand(options: CacheGcOptions = {}): Promise<void
       cacheDir: cacheManager.getCacheDir(),
     });
   } else {
-    logInfo(chalk.green(`✓ Removed ${removed} cache ${removed === 1 ? 'entry' : 'entries'}`));
+    logInfo(
+      chalk.green(
+        `✓ Removed ${removed} ${removed === 1 ? 'cache entry' : 'cache entries'} older than ${maxAgeDays} days`
+      )
+    );
   }
 }
 

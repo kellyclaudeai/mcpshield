@@ -18,11 +18,12 @@
     "summary": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["servers", "artifacts", "ok", "drift", "errors", "skipped"],
+      "required": ["servers", "artifacts", "ok", "fixed", "drift", "errors", "skipped"],
       "properties": {
         "servers": { "type": "integer", "minimum": 0 },
         "artifacts": { "type": "integer", "minimum": 0 },
         "ok": { "type": "integer", "minimum": 0 },
+        "fixed": { "type": "integer", "minimum": 0 },
         "drift": { "type": "integer", "minimum": 0 },
         "errors": { "type": "integer", "minimum": 0 },
         "skipped": { "type": "integer", "minimum": 0 }
@@ -61,7 +62,7 @@
         "url": { "type": "string" },
         "expectedDigest": { "$ref": "#/definitions/Digest" },
         "actualDigest": { "type": ["string", "null"], "pattern": "^(sha256|sha512)-[A-Za-z0-9+/=]+$" },
-        "status": { "type": "string", "enum": ["ok", "drift", "error", "skipped"] },
+        "status": { "type": "string", "enum": ["ok", "fixed", "drift", "error", "skipped"] },
         "source": { "type": "string", "enum": ["cache", "download", "skipped"] },
         "error": { "anyOf": [{ "type": "null" }, { "$ref": "#/definitions/ErrorItem" }] }
       }
@@ -69,11 +70,12 @@
     "VerifyServerResult": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["namespace", "version", "verified", "artifacts", "errors"],
+      "required": ["namespace", "version", "publisherVerified", "integrityOk", "artifacts", "errors"],
       "properties": {
         "namespace": { "type": "string" },
         "version": { "type": "string" },
-        "verified": { "type": "boolean" },
+        "publisherVerified": { "type": "boolean" },
+        "integrityOk": { "type": "boolean" },
         "artifacts": {
           "type": "array",
           "items": { "$ref": "#/definitions/VerifyArtifactResult" }
@@ -86,4 +88,3 @@
     }
   }
 }
-

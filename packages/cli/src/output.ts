@@ -20,6 +20,9 @@ export interface GlobalOptions {
 
 // Global state (set by CLI before command execution)
 let globalOptions: GlobalOptions = { color: true };
+let consoleRedirectedForJson = false;
+const originalConsoleLog = console.log.bind(console);
+const originalConsoleInfo = (console.info ? console.info.bind(console) : console.log.bind(console)) as typeof console.log;
 
 export function setGlobalOptions(opts: GlobalOptions): void {
   globalOptions = { ...opts };
@@ -27,6 +30,18 @@ export function setGlobalOptions(opts: GlobalOptions): void {
   // Disable chalk if --no-color or --json
   if (!opts.color || opts.json) {
     chalk.level = 0;
+  }
+
+  // In --json mode, reserve stdout strictly for machine output.
+  // Redirect any accidental console.log/info calls (including from dependencies) to stderr.
+  if (opts.json) {
+    if (!consoleRedirectedForJson) consoleRedirectedForJson = true;
+    console.log = ((...args: any[]) => console.error(...args)) as any;
+    console.info = ((...args: any[]) => console.error(...args)) as any;
+  } else if (consoleRedirectedForJson) {
+    consoleRedirectedForJson = false;
+    console.log = originalConsoleLog;
+    console.info = originalConsoleInfo as any;
   }
 }
 
@@ -43,7 +58,7 @@ export function writeJson(data: any): void {
   
   // Sort keys recursively for stable output
   const sortedData = sortKeys(data);
-  console.log(JSON.stringify(sortedData, null, 2));
+  process.stdout.write(JSON.stringify(sortedData, null, 2) + '\n');
 }
 
 /**

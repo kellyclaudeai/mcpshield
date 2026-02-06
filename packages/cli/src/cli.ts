@@ -7,7 +7,7 @@
 import { Command } from 'commander';
 import { createRequire } from 'module';
 import { RegistryClient } from '@kellyclaude/mcpshield-core';
-import { addCommand, initCommand, verifyCommand, scanCommand, cacheGcCommand, cachePurgeCommand, doctorCommand, lockValidateCommand } from './commands/index.js';
+import { addCommand, initCommand, verifyCommand, scanCommand, searchCommand, cacheGcCommand, cachePurgeCommand, doctorCommand, lockValidateCommand } from './commands/index.js';
 import { setGlobalOptions, handleCommandError, debugLog } from './output.js';
 
 const require = createRequire(import.meta.url);
@@ -87,11 +87,12 @@ program
 program
   .command('verify')
   .description('Verify all servers in lockfile')
-  .action(async (_options, command: Command) => {
+  .option('--fix', 'If drift is detected, re-download and update lockfile digests')
+  .action(async (options: { fix?: boolean }, command: Command) => {
     const startTime = Date.now();
     try {
       const globalOpts = command.optsWithGlobals();
-      const exitCode = await verifyCommand({ offline: globalOpts.offline });
+      const exitCode = await verifyCommand({ offline: globalOpts.offline, fix: options.fix });
       debugLog(`verify completed in ${Date.now() - startTime}ms with exit code ${exitCode}`);
       process.exit(exitCode);
     } catch (error: any) {
@@ -120,6 +121,32 @@ program
       handleCommandError(error, 'scan');
     }
   });
+
+// search command
+program
+  .command('search')
+  .description('Search MCP registry for servers')
+  .argument('<query>', 'Search term (name, description, tags)')
+  .option('--type <type>', 'Filter by package type (npm|pypi|docker|nuget|mcpb)')
+  .option('--limit <n>', 'Maximum results to return (default: 20)', (value) => parseInt(value, 10))
+  .option('--cursor <cursor>', 'Pagination cursor (from a previous search response)')
+  .option('--all-versions', 'Include non-latest versions')
+  .action(
+    async (
+      query: string,
+      options: { type?: string; limit?: number; cursor?: string; allVersions?: boolean },
+      _command: Command
+    ) => {
+      const startTime = Date.now();
+      try {
+        const exitCode = await searchCommand(query, options);
+        debugLog(`search completed in ${Date.now() - startTime}ms with exit code ${exitCode}`);
+        process.exit(exitCode);
+      } catch (error: any) {
+        handleCommandError(error, 'search');
+      }
+    }
+  );
 
 
 // lock commands

@@ -37,12 +37,13 @@ describe('CLI JSON Schemas', () => {
       toolVersion: '0.1.0',
       command: 'verify',
       generatedAt: new Date().toISOString(),
-      summary: { servers: 1, artifacts: 1, ok: 1, drift: 0, errors: 0, skipped: 0 },
+      summary: { servers: 1, artifacts: 1, ok: 1, fixed: 0, drift: 0, errors: 0, skipped: 0 },
       results: [
         {
           namespace: 'io.github.example/server',
           version: '1.2.3',
-          verified: true,
+          publisherVerified: true,
+          integrityOk: true,
           artifacts: [
             {
               type: 'npm',
@@ -154,6 +155,37 @@ describe('CLI JSON Schemas', () => {
       files: { lockfileExists: true, policyExists: true },
       registry: { url: 'https://registry.modelcontextprotocol.io', dnsResolved: true, httpsReachable: true },
       timestamp: new Date().toISOString(),
+    };
+
+    const ok = validate(sample);
+    assert.equal(ok, true, JSON.stringify(validate.errors, null, 2));
+  });
+
+  it('search output validates', async () => {
+    const schema = await loadSchema('schemas/cli/search-output.schema.json');
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    addFormats(ajv);
+    const validate = ajv.compile(schema);
+
+    const sample = {
+      tool: 'mcpshield',
+      toolVersion: '0.1.0',
+      command: 'search',
+      generatedAt: new Date().toISOString(),
+      input: { query: 'context7', type: 'npm', limit: 20, cursor: null, allVersions: false },
+      summary: { returned: 1, total: 4, nextCursor: null },
+      results: [
+        {
+          name: 'io.github.upstash/context7',
+          version: '1.0.31',
+          description: 'Context7 MCP server',
+          repository: 'https://github.com/upstash/context7',
+          packages: [{ type: 'npm', identifier: '@upstash/context7', version: '1.0.31', runtimeHint: 'npx' }],
+          remotes: [],
+          meta: { status: 'active', isLatest: true, publishedAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+        },
+      ],
+      errors: [],
     };
 
     const ok = validate(sample);

@@ -454,6 +454,7 @@ export async function scanCommand(options: ScanCommandOptions = {}): Promise<num
           severity: finding.severity,
           category: finding.category,
           message: finding.message,
+          file: typeof (finding.details as any)?.file === 'string' ? ((finding.details as any).file as string) : undefined,
         }))
       ),
     }));

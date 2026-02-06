@@ -11,7 +11,7 @@ The MVP is fully functional with all core features implemented:
 - ✅ **Lockfile Management** - Track verified servers in `mcp.lock.json`
 - ✅ **Artifact Verification** - Download and verify npm/PyPI packages
 - ✅ **Security Scanning** - Detect typosquats, suspicious code, and vulnerabilities
-- ✅ **CLI Commands** - init, add, verify, scan
+- ✅ **CLI Commands** - init, search, add, verify, scan
 - ✅ **Registry Integration** - Fetch and verify servers from MCP Registry
 - ✅ **Test Coverage** - E2E + unit tests passing
 
@@ -25,16 +25,13 @@ git clone https://github.com/kellyclaudeai/mcpshield.git
 cd mcpshield
 
 # Install dependencies
-npm install
+pnpm install
 
 # Build the project
-npm run build
-
-# Link CLI globally (optional)
-npm link packages/cli
+pnpm run build
 ```
 
-**Requirements:** Node.js >= 22
+**Requirements:** Node.js >= 22, pnpm >= 10
 
 ### Usage
 
@@ -42,13 +39,16 @@ npm link packages/cli
 # 1. Initialize in your project
 mcp-shield init
 
-# 2. Add an MCP server
+# 2. Find an MCP server (optional)
+mcp-shield search context7 --type npm
+
+# 3. Add an MCP server
 mcp-shield add io.github.user/server-name
 
-# 3. Verify all servers
+# 4. Verify all servers
 mcp-shield verify
 
-# 4. Run security scan
+# 5. Run security scan
 mcp-shield scan
 ```
 
@@ -120,6 +120,20 @@ Creates:
 - `mcp.lock.json` - Empty lockfile
 - `policy.yaml` - Policy configuration template
 
+#### `mcp-shield search <query>`
+
+Search the MCP registry:
+
+```bash
+mcp-shield search context7 --type npm
+```
+
+Options:
+- `--type <type>` - Filter by package type (`npm|pypi|docker|nuget|mcpb`)
+- `--limit <n>` - Max results (default: 20)
+- `--cursor <cursor>` - Pagination cursor from a previous search
+- `--all-versions` - Include non-latest versions
+
 #### `mcp-shield add <server-name>`
 
 Add an MCP server with full verification:
@@ -152,6 +166,9 @@ mcp-shield verify
 - Downloads artifacts from cache or registry
 - Verifies digests match lockfile
 - Reports any drift detected
+
+Options:
+- `--fix` - If drift is detected, re-download and update lockfile digests
 
 #### `mcp-shield scan`
 
@@ -201,32 +218,32 @@ mcpshield/
 ### Prerequisites
 
 - Node.js >= 22
-- npm >= 9
+- pnpm >= 10
 
 ### Build
 
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
 # Build all packages
-npm run build
+pnpm run build
 
 # Watch mode (rebuild on changes)
-npm run build -- --watch
+pnpm run build -- --watch
 ```
 
 ### Testing
 
 ```bash
 # Run all tests
-npm test
+pnpm test
 
 # Run E2E tests only
-npm run test:e2e
+pnpm run test:e2e
 
 # Run unit tests only
-npm run test:unit
+pnpm run test:unit
 ```
 
 ### Testing Individual Components

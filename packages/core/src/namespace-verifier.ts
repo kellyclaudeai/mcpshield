@@ -89,8 +89,10 @@ export function isValidNamespaceFormat(name: string): boolean {
 export function extractPublisherIdentity(response: RegistryServerResponse): PublisherIdentity | null {
   const { server, _meta } = response;
   
-  // Check registry official/verified status
-  const registryStatus = _meta?.['io.modelcontextprotocol.registry/official']?.status;
+  // Check registry status (some endpoints may surface "official"/"verified", others lifecycle statuses).
+  const registryStatusRaw = _meta?.['io.modelcontextprotocol.registry/official']?.status;
+  const registryStatus =
+    registryStatusRaw === 'official' || registryStatusRaw === 'verified' ? registryStatusRaw : undefined;
   
   const identity: PublisherIdentity = {
     status: registryStatus || 'community',

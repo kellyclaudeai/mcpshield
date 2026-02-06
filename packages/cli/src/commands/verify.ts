@@ -30,7 +30,7 @@ import {
 const require = createRequire(import.meta.url);
 const toolVersion: string = require('../../package.json').version;
 
-type VerifyArtifactStatus = 'ok' | 'drift' | 'error' | 'skipped';
+type VerifyArtifactStatus = 'ok' | 'fixed' | 'drift' | 'error' | 'skipped';
 type VerifyArtifactSource = 'cache' | 'download' | 'skipped';
 
 interface ErrorItem {
@@ -52,7 +52,8 @@ interface VerifyArtifactResult {
 interface VerifyServerResult {
   namespace: string;
   version: string;
-  verified: boolean;
+  publisherVerified: boolean;
+  integrityOk: boolean;
   artifacts: VerifyArtifactResult[];
   errors: ErrorItem[];
 }
@@ -66,6 +67,7 @@ export interface VerifyJsonOutput {
     servers: number;
     artifacts: number;
     ok: number;
+    fixed: number;
     drift: number;
     errors: number;
     skipped: number;
@@ -76,12 +78,17 @@ export interface VerifyJsonOutput {
 
 export interface VerifyCommandOptions {
   offline?: boolean;
+  fix?: boolean;
 }
 
 export async function verifyCommand(options: VerifyCommandOptions = {}): Promise<number> {
   const startTime = Date.now();
   const opts = getGlobalOptions();
   const lockfileManager = new LockfileManager();
+
+  if (options.fix && options.offline) {
+    throw new UserError('Cannot use --fix with --offline. Re-run without --offline to allow downloads.');
+  }
 
   if (!(await lockfileManager.exists())) {
     throw new UserError('No mcp.lock.json found. Run `mcp-shield init` and `mcp-shield add` first.');
@@ -106,10 +113,12 @@ export async function verifyCommand(options: VerifyCommandOptions = {}): Promise
   const topErrors: ErrorItem[] = [];
 
   let ok = 0;
+  let fixed = 0;
   let drift = 0;
   let errors = 0;
   let skipped = 0;
   let offlineCacheMiss = false;
+  let lockfileUpdated = false;
 
   for (const namespace of Object.keys(lockfile.servers).sort()) {
     const entry = lockfile.servers[namespace] as LockfileEntry;
@@ -117,7 +126,8 @@ export async function verifyCommand(options: VerifyCommandOptions = {}): Promise
     const serverResult: VerifyServerResult = {
       namespace,
       version: entry.version,
-      verified: entry.verified,
+      publisherVerified: entry.verified,
+      integrityOk: true,
       artifacts: [],
       errors: [],
     };
@@ -194,9 +204,16 @@ export async function verifyCommand(options: VerifyCommandOptions = {}): Promise
           error: null,
         });
 
-        if (verification.valid) ok += 1;
-        else drift += 1;
-        continue;
+        if (verification.valid) {
+          ok += 1;
+          continue;
+        }
+
+        if (!options.fix) {
+          drift += 1;
+          continue;
+        }
+        // In --fix mode, we re-download to confirm drift and update lockfile.
       }
 
       // Download + compute digest
@@ -207,7 +224,13 @@ export async function verifyCommand(options: VerifyCommandOptions = {}): Promise
           tempPath
         );
 
-        const status: VerifyArtifactStatus = actualDigest === expectedDigest ? 'ok' : 'drift';
+        let status: VerifyArtifactStatus = actualDigest === expectedDigest ? 'ok' : 'drift';
+
+        if (status === 'drift' && options.fix) {
+          artifact.digest = actualDigest;
+          lockfileUpdated = true;
+          status = 'fixed';
+        }
 
         serverResult.artifacts.push({
           type: artifact.type,
@@ -222,6 +245,9 @@ export async function verifyCommand(options: VerifyCommandOptions = {}): Promise
         if (status === 'ok') {
           ok += 1;
           await cache.put(expectedDigest, tempPath);
+        } else if (status === 'fixed') {
+          fixed += 1;
+          await cache.put(actualDigest, tempPath);
         } else {
           drift += 1;
         }
@@ -251,7 +277,16 @@ export async function verifyCommand(options: VerifyCommandOptions = {}): Promise
       return a.url.localeCompare(b.url);
     });
 
+    serverResult.integrityOk = serverResult.artifacts.every(
+      (artifact) => artifact.status === 'ok' || artifact.status === 'fixed' || artifact.status === 'skipped'
+    );
+
     results.push(serverResult);
+  }
+
+  if (options.fix && lockfileUpdated) {
+    lockfile.generatedAt = new Date().toISOString();
+    await lockfileManager.write(lockfile);
   }
 
   const output: VerifyJsonOutput = {
@@ -263,6 +298,7 @@ export async function verifyCommand(options: VerifyCommandOptions = {}): Promise
       servers: results.length,
       artifacts: results.reduce((sum, r) => sum + r.artifacts.length, 0),
       ok,
+      fixed,
       drift,
       errors,
       skipped,

@@ -1,6 +1,6 @@
 {
   "name": "@kellyclaude/mcpshield-core",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Core functionality for MCPShield: registry client, lockfile manager, types",
   "license": "MIT",
   "repository": {

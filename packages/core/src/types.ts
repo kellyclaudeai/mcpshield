@@ -63,14 +63,58 @@ export interface PublisherIdentity {
   };
 }
 
+export interface RegistryOfficialMeta {
+  /**
+   * Registry lifecycle status for this server version.
+   * Observed values include: "active", "deprecated", "deleted".
+   * Some endpoints may also surface publisher verification states (e.g. "official", "verified").
+   */
+  status?: string;
+  publishedAt?: string;
+  updatedAt?: string;
+  verifiedAt?: string;
+  isLatest?: boolean;
+}
+
 export interface RegistryServerResponse {
   server: Server;
   _meta?: {
     'io.modelcontextprotocol.registry/official'?: {
-      status: 'official' | 'verified';
+      status?: string;
+      publishedAt?: string;
+      updatedAt?: string;
       verifiedAt?: string;
+      isLatest?: boolean;
     };
   };
+}
+
+export interface RegistryListMetadata {
+  count?: number;
+  nextCursor?: string;
+}
+
+export interface RegistryListedServer {
+  $schema?: string;
+  name: string;
+  description: string;
+  version: string;
+  repository?: Server['repository'];
+  packages?: Package[];
+  remotes?: unknown[];
+  license?: string;
+  homepage?: string;
+  tags?: string[];
+}
+
+export interface RegistryListItem {
+  server: RegistryListedServer;
+  _meta?: RegistryServerResponse['_meta'];
+}
+
+export interface RegistryListResponse {
+  servers: RegistryListItem[];
+  metadata?: RegistryListMetadata;
 }
 
 export interface LockedPackage extends Package {

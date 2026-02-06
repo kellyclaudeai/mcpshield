@@ -223,7 +223,27 @@ export async function addCommand(serverName: string, options: AddCommandOptions 
   }
 
   if (lockArtifacts.length === 0) {
-    throw new UserError('No supported artifacts found for this server (Pilot supports npm only).');
+    const availableTypes = Array.from(new Set((server.packages ?? []).map((pkg) => pkg.type))).sort();
+    const remoteCount = Array.isArray((server as any).remotes) ? (server as any).remotes.length : 0;
+
+    const lines: string[] = [
+      'No supported artifacts found for this server.',
+      'Pilot supports npm only.',
+    ];
+
+    if (availableTypes.length > 0) {
+      lines.push(`Available package types: ${availableTypes.join(', ')}`);
+    } else if (remoteCount === 0) {
+      lines.push('No packages were listed for this server in the registry response.');
+    }
+
+    if (remoteCount > 0) {
+      lines.push(`This server advertises ${remoteCount} remote endpoint(s), which MCPShield does not pin/scan in Pilot.`);
+    }
+
+    lines.push('Tip: use `mcp-shield search <term> --type npm` to find npm-installable servers.');
+
+    throw new UserError(lines.join('\n'));
   }
 
   // Policy evaluation

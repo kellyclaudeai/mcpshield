@@ -3,7 +3,7 @@
  */
 
 import got, { HTTPError } from 'got';
-import { RegistryServerResponse, RegistryError, Server } from './types.js';
+import { RegistryListResponse, RegistryServerResponse, RegistryError, Server } from './types.js';
 
 export interface RegistryClientOptions {
   baseUrl?: string;
@@ -16,6 +16,7 @@ const DEFAULT_REGISTRY_URL = 'https://registry.modelcontextprotocol.io';
 const DEFAULT_TIMEOUT = 30000; // 30 seconds
 const DEFAULT_RETRIES = 2;
 const DEFAULT_VERSION = 'latest';
+const DEFAULT_LIST_LIMIT = 30;
 
 function normalizeRegistryType(value: unknown): Server['packages'][number]['type'] | null {
   if (typeof value !== 'string') return null;
@@ -138,6 +139,109 @@ export class RegistryClient {
   }
 
   /**
+   * Search/list servers in the MCP registry.
+   *
+   * Uses the v0.1 list endpoint which returns a mixed set of deployment types
+   * (packages + remotes). Callers can filter by package type if desired.
+   */
+  async searchServers(options: { search: string; cursor?: string; limit?: number }): Promise<RegistryListResponse> {
+    const search = options.search?.trim();
+    if (!search) {
+      throw new RegistryError('Search term is required');
+    }
+
+    const params = new URLSearchParams();
+    params.set('search', search);
+    if (options.cursor) params.set('cursor', options.cursor);
+
+    const url = `${this.baseUrl}/v0.1/servers?${params.toString()}`;
+
+    try {
+      const response = await got(url, {
+        headers: this.headers,
+        timeout: { request: this.timeout },
+        retry: { limit: this.retries },
+        responseType: 'json',
+      });
+
+      const data = response.body as any;
+      if (!data || !Array.isArray(data.servers)) {
+        throw new RegistryError('Invalid response from registry: missing servers list', response.statusCode, data);
+      }
+
+      const normalizedServers = data.servers
+        .map((item: any) => {
+          const server = item?.server;
+          if (
+            !server?.name ||
+            typeof server.name !== 'string' ||
+            typeof server.description !== 'string' ||
+            typeof server.version !== 'string'
+          ) {
+            return null;
+          }
+
+          const packages = Array.isArray(server.packages)
+            ? server.packages
+                .map((pkg: any) => {
+                  const type =
+                    normalizeRegistryType(pkg?.type) ??
+                    normalizeRegistryType(pkg?.registryType) ??
+                    (typeof pkg?.type === 'string' ? (pkg.type as any) : null);
+
+                  if (!type) return null;
+
+                  return {
+                    ...pkg,
+                    type,
+                    identifier: pkg.identifier,
+                    version: pkg.version,
+                    digest: pkg.digest,
+                  };
+                })
+                .filter(Boolean)
+            : undefined;
+
+          return {
+            ...item,
+            server: {
+              ...server,
+              packages,
+            },
+          };
+        })
+        .filter(Boolean);
+
+      const limit = options.limit ?? DEFAULT_LIST_LIMIT;
+      const servers = normalizedServers.slice(0, Math.max(0, limit));
+
+      return {
+        servers,
+        metadata: data.metadata,
+      } as RegistryListResponse;
+    } catch (error: any) {
+      if (error instanceof HTTPError) {
+        const statusCode = error.response.statusCode;
+        let message = 'Failed to search servers in registry';
+
+        if (statusCode === 429) {
+          message = 'Rate limit exceeded. Please try again later.';
+        } else if (statusCode >= 500) {
+          message = 'Registry service is currently unavailable';
+        }
+
+        throw new RegistryError(message, statusCode, error.response.body);
+      }
+
+      if (error instanceof Error) {
+        throw new RegistryError(`Network error while searching registry: ${error.message}`);
+      }
+
+      throw error;
+    }
+  }
+
+  /**
    * Extract publisher identity from registry response metadata
    * @param response - Registry server response
    * @returns Publisher identity information
@@ -147,9 +251,11 @@ export class RegistryClient {
     const server = response.server;
 
     const npmPackage = server.packages.find((p: any) => p.type === 'npm' || p.registryType === 'npm');
+    const statusRaw = officialMeta?.status;
+    const status = statusRaw === 'official' || statusRaw === 'verified' ? statusRaw : 'community';
 
     return {
-      status: officialMeta?.status || 'community',
+      status,
       github: server.repository?.url?.includes('github.com')
         ? this.parseGitHubUrl(server.repository.url)
         : undefined,

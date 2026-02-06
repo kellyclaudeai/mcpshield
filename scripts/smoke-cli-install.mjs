@@ -47,8 +47,13 @@ async function main() {
   const packageSpec = `@kellyclaude/mcpshield@${args.version}`;
 
   try {
-    await runCommand('npm', ['init', '-y'], { cwd: tempDir });
-    await runCommand('npm', ['install', packageSpec], { cwd: tempDir });
+    await fs.writeFile(
+      path.join(tempDir, 'package.json'),
+      JSON.stringify({ name: 'mcpshield-smoke-install', private: true }, null, 2) + '\n',
+      'utf8',
+    );
+
+    await runCommand('pnpm', ['add', packageSpec], { cwd: tempDir });
     await runCommand(path.join(tempDir, 'node_modules', '.bin', 'mcp-shield'), ['--help'], {
       cwd: tempDir,
     });
@@ -62,4 +67,3 @@ main().catch((error) => {
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);
 });
-

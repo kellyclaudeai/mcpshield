@@ -95,6 +95,7 @@ Example:
     "servers": 1,
     "artifacts": 1,
     "ok": 1,
+    "fixed": 0,
     "drift": 0,
     "errors": 0,
     "skipped": 0
@@ -103,7 +104,8 @@ Example:
     {
       "namespace": "io.github.example/server",
       "version": "1.2.3",
-      "verified": true,
+      "publisherVerified": true,
+      "integrityOk": true,
       "artifacts": [
         {
           "type": "npm",
@@ -194,7 +196,7 @@ Example:
 
 MCPShield is “Pilot-ready” only when all items below are true:
 
-- [x] `npm ci && npm run build && npm test` pass locally (Node 25.5.0); CI matrix covers Node 22 + 24.
+- [x] `pnpm install --frozen-lockfile && pnpm run build && pnpm test` pass locally (Node 25.5.0); CI matrix covers Node 22 + 24.
 - [x] `mcp-shield init/add/verify/scan` work end-to-end in a clean temp repo (see QA checklist; may require a permissive `maxRiskScore` for high-risk servers).
 - [x] `verify` blocks drift deterministically (exit 1), with `--json` output.
 - [x] `scan` applies policy thresholds deterministically (exit 1 in CI/policy-block), with `--json` output.
@@ -221,7 +223,7 @@ Files to add:
   - ensure `README.md` documents `npx @kellyclaude/mcpshield` as the default install/run path once published
 
 Acceptance:
-- [x] `npm test` still passes.
+- [x] `pnpm test` still passes.
 - [ ] GitHub renders the files correctly. (manual verification)
 
 ### PR-002 — Lockfile schema + atomic writes
@@ -391,7 +393,7 @@ Implement:
   - map each finding to `mcp.lock.json` as the location (startLine 1 is acceptable for Pilot)
   - set unique `run.automationDetails.id` and/or `category` to avoid run collisions per repo
 - [x] Add GitHub Action workflow: `.github/workflows/code-scanning.yml`:
-  - runs `npm ci`, `npm run build`
+  - runs `pnpm install --frozen-lockfile`, `pnpm run build`
   - runs `node packages/cli/dist/cli.js scan --ci --sarif > results.sarif`
   - uploads via `github/codeql-action/upload-sarif@v3`
 
@@ -433,10 +435,10 @@ Acceptance:
 ### PR-011 — CI hardening (deterministic + multi-version)
 Implement:
 - [x] Update `.github/workflows/ci-cd.yml`:
-  - use `npm ci` (not `npm install`)
+  - use `pnpm install --frozen-lockfile` (not `npm install`)
   - test matrix for Node 22 and Node 24
-  - run `npm run build` and `npm test`
-  - add `npm run lint` step (create `lint` scripts if missing)
+  - run `pnpm run build` and `pnpm test`
+  - add `pnpm run lint` step (create `lint` scripts if missing)
 - [x] Add OS smoke tests (Pilot):
   - Linux required
   - macOS optional (but recommended) as a separate job
@@ -457,15 +459,38 @@ Implement:
 Acceptance:
 - [x] `mcp-shield doctor --json` validates against a schema `schemas/cli/doctor-output.schema.json`.
 
+### PR-013 — External tester follow-ups (v0.1.x UX + CI polish)
+Implement:
+- [x] Add discovery: `mcp-shield search <query> [--type npm] [--limit N] [--cursor <cursor>] [--all-versions]`
+- [x] Improve Docker-only server UX in `add`:
+  - show available package types and remote endpoints when npm artifacts are missing
+  - include a clear `mcp-shield search <term> --type npm` tip
+- [x] Clarify publisher vs integrity in `verify --json`:
+  - rename `verified` → `publisherVerified`
+  - add `integrityOk` server-level flag
+- [x] Add drift remediation: `mcp-shield verify --fix` (re-download + update lockfile digests)
+- [x] Improve SARIF locations:
+  - if findings include `details.file`, emit `mcpshield://artifact/<namespace>@<version>/<file>` as `physicalLocation`
+- [x] Harden JSON stdout purity:
+  - in `--json` mode, redirect accidental `console.log/info` output to stderr
+- [x] Improve cache GC messaging: include the max-age window in the human summary
+
+### PR-014 — Migrate to pnpm (repo + CI)
+Implement:
+- [x] Add `pnpm-workspace.yaml` and commit `pnpm-lock.yaml`
+- [x] Update root scripts to use pnpm (`pnpm run build`, `pnpm test`, etc.)
+- [x] Update GitHub Actions workflows to use pnpm and lockfile caching
+- [x] Remove `package-lock.json` from the repo
+
 ---
 
 ## E) Deterministic QA checklist (run before every release)
 
 Run locally:
-- [x] `npm ci`
-- [x] `npm run build`
-- [x] `npm test`
-- [x] `npm run release:smoke:local`
+- [x] `pnpm install --frozen-lockfile`
+- [x] `pnpm run build`
+- [x] `pnpm test`
+- [x] `pnpm run release:smoke:local`
 - [x] `node packages/cli/dist/cli.js --help`
 - [x] In a temp dir:
   - [x] `mcp-shield init`

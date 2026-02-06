@@ -11,7 +11,7 @@ Be respectful, constructive, and professional. We're all here to build something
 ### Prerequisites
 
 - **Node.js** >= 22.0.0
-- **npm** >= 9.0.0
+- **pnpm** >= 10.0.0
 - **Git**
 
 ### Setup
@@ -31,24 +31,24 @@ Be respectful, constructive, and professional. We're all here to build something
 
 4. **Install dependencies:**
    ```bash
-   npm install
+   pnpm install
    ```
 
 5. **Build the project:**
    ```bash
-   npm run build
+   pnpm run build
    ```
 
-6. **Link the CLI (optional, for testing):**
+6. **Run the CLI locally (optional):**
    ```bash
-   npm link packages/cli
+   node packages/cli/dist/cli.js --help
    ```
 
 ## Development Workflow
 
 ### Project Structure
 
-MCPShield is a monorepo with npm workspaces:
+MCPShield is a monorepo with pnpm workspaces:
 
 ```
 mcpshield/
@@ -72,12 +72,12 @@ mcpshield/
 
 3. **Build:**
    ```bash
-   npm run build
+   pnpm run build
    ```
 
 4. **Test your changes:**
    ```bash
-   npm test
+   pnpm test
    ```
 
 ### Running Tests
@@ -86,22 +86,22 @@ MCPShield has two test suites:
 
 **Unit tests** (in each package):
 ```bash
-npm run test:unit
+pnpm run test:unit
 ```
 
 **E2E tests** (integration tests):
 ```bash
-npm run test:e2e
+pnpm run test:e2e
 ```
 
 **Run all tests:**
 ```bash
-npm test
+pnpm test
 ```
 
 **Watch mode** (for development):
 ```bash
-npm run test:watch
+pnpm run test:watch
 ```
 
 ### Testing Your Changes Manually
@@ -141,26 +141,26 @@ mcp-shield scan
 We use Prettier for consistent formatting:
 
 ```bash
-npm run format  # Coming soon
+pnpm run format  # Coming soon
 ```
 
 ### Linting
 
 ```bash
-npm run lint
+pnpm run lint
 ```
 
 Fix issues automatically where possible:
 
 ```bash
-npm run lint -- --fix
+pnpm run lint -- --fix
 ```
 
 ## Pull Request Process
 
 ### Before Submitting
 
-1. **Run tests** - Ensure `npm test` passes
+1. **Run tests** - Ensure `pnpm test` passes
 2. **Update documentation** - Update README or docs if needed
 3. **Add tests** - Include tests for new features
 4. **Commit messages** - Write clear, descriptive commit messages
@@ -219,7 +219,7 @@ docs: update CONTRIBUTING.md with test instructions
 
 Before submitting, verify:
 
-- [ ] Tests pass (`npm test`)
+- [ ] Tests pass (`pnpm test`)
 - [ ] Code follows existing style
 - [ ] Documentation is updated
 - [ ] Commit messages are clear
@@ -281,7 +281,8 @@ mcp-shield add io.github.modelcontextprotocol/fetch
 When adding dependencies:
 
 - Add to the specific package (`packages/core`, `packages/cli`, etc.)
-- Use `npm install <package> -w @kellyclaude/mcpshield-core` syntax
+- Use `pnpm --filter @kellyclaude/mcpshield-core add <package>` syntax
+- Use `pnpm --filter @kellyclaude/mcpshield-core add <package>` syntax
 - Keep root-level dependencies minimal (dev tools only)
 
 ## Questions?
